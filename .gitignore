@@ -1,0 +1,14 @@
+# Python
+venv/
+*.pyc
+__pycache__/
+
+# Секреты (ВАЖНО!)
+.env
+
+# Docker данные
+postgres_data/
+
+# IDE
+.vscode/
+.idea/
