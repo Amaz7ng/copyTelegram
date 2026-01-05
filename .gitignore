@@ -12,3 +12,6 @@ postgres_data/
 # IDE
 .vscode/
 .idea/
+
+#media
+media/
