@@ -16,7 +16,7 @@ class User(AbstractUser):
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True, verbose_name="Аватар")
     updated_at = models.DateTimeField(auto_now=True)
     
-    is_2fa_enable = models.BooleanField(default=False, verbose_name="2FA включена")
+    is_2fa_enabled = models.BooleanField(default=False, verbose_name="2FA включена")
     otp_code = models.CharField(max_length=6, blank=True, null=True, verbose_name="Код подтверждения")
     otp_created_at = models.DateTimeField(blank=True, null=True)
     
