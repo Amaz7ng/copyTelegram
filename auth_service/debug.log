@@ -1,0 +1,6 @@
+INFO -- 2026-01-06 16:46:23,696 -- producer -- [Kafka] Доставлено в топик user_created [0]
+INFO -- 2026-01-06 16:46:23,696 -- producer -- [Kafka] Сообщение в очереди: mikasa
+INFO -- 2026-01-06 13:01:07,390 -- producer -- [Kafka] Доставлено в топик user_created [0]
+INFO -- 2026-01-06 13:01:07,391 -- producer -- [Kafka] Сообщение в очереди: erwin
+INFO -- 2026-01-06 13:08:46,102 -- producer -- [Kafka] Доставлено в топик user_created [0]
+INFO -- 2026-01-06 13:08:46,103 -- producer -- [Kafka] Сообщение в очереди: Reiner

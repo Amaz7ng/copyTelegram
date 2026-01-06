@@ -1,13 +1,14 @@
 import json
+import logging
 import asyncio
 from confluent_kafka import Producer, Message
 import socket
 from typing import Optional, Any, Dict
 
-
+logger = logging.getLogger('users')
 
 conf = {
-    'bootstrap.servers': 'localhost:9092',
+    'bootstrap.servers': 'kafka:9093',
     'client.id': socket.gethostname(),
     'queue.buffering.max.ms': 5, 
 }
@@ -17,10 +18,11 @@ producer = Producer(conf)
 def delivery_report(err: Optional[Exception], msg: Message) -> None:
     """Отчет о доставке (callback), вызывается когда Kafka подтвердила получение"""
     if err is not None:
-        print(f" [Kafka] Ошибка доставки: {err}")
+        logger.error(f"[Kafka] Ошибка доставки: {err}")
     else:
-        print(f" [Kafka] Доставлено в топик {msg.topic()} [{msg.partition()}]")
-
+        logger.info(f"[Kafka] Доставлено в топик {msg.topic()} [{msg.partition()}]")
+        
+        
 async def publish_user_created(user_data: Dict[str, Any]) -> None:
     """Асинхронная обертка для отправки сообщения"""
     try:
@@ -34,7 +36,7 @@ async def publish_user_created(user_data: Dict[str, Any]) -> None:
         producer.poll(0) 
         producer.flush(1)
         
-        print(f" [Kafka] Сообщение в очереди на отправку: {user_data['username']}")
+        logger.info(f"[Kafka] Сообщение в очереди: {user_data.get('username')}")
         
     except Exception as e:
-        print(f" [Kafka] Ошибка: {e}")
+        logger.error(f"[Kafka] Ошибка при отправке: {e}")

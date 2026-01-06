@@ -1,4 +1,7 @@
 import asyncio
+import uuid
+import random
+import logging
 
 from django.db import models
 from django.contrib.auth.models import AbstractUser
@@ -8,6 +11,8 @@ from django.dispatch import receiver
 from .producer import publish_user_created
 
 from typing import Any, Dict, Type
+
+logger = logging.getLogger('users') 
 
 
 class User(AbstractUser):
@@ -19,6 +24,27 @@ class User(AbstractUser):
     is_2fa_enabled = models.BooleanField(default=False, verbose_name="2FA включена")
     otp_code = models.CharField(max_length=6, blank=True, null=True, verbose_name="Код подтверждения")
     otp_created_at = models.DateTimeField(blank=True, null=True)
+    
+    search_handle = models.CharField(
+        max_length=32, 
+        unique=True, 
+        db_index=True, 
+        verbose_name="Тэг (username как в TG)",
+        help_text="Если оставить пустым, сгенерируется автоматически"
+    )
+    
+    def save(self, *args, **kwargs):
+        if not self.search_handle:
+            random_suffix = ''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=6))
+            self.search_handle = f"user_{random_suffix}"
+            
+            while User.objects.filter(search_handle=self.search_handle).exists():
+                random_suffix = ''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=6))
+                self.search_handle = f"user_{random_suffix}"
+        
+        # Принудительно переводим в нижний регистр для удобства поиска
+        self.search_handle = self.search_handle.lower()
+        super().save(*args, **kwargs)
     
     def __str__(self):
         return self.username
@@ -35,11 +61,14 @@ def user_created_sig(sender: Type[User],
             data = {
 				'id': instance.id,
 				'username': instance.username,
-				'email': instance.email
+                'search_handle': instance.search_handle,
+				'email': instance.email,
+                'avatar': instance.avatar.url if instance.avatar else None
+    
 			}
             
             try:
                 from asgiref.sync import async_to_sync
                 async_to_sync(publish_user_created)(data)
             except Exception as e:
-                print(f"Ошибка при запуске Kafka задачи: {e}")
+                logging.ERROR(f"Ошибка при запуске Kafka задачи: {e}")

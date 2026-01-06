@@ -18,9 +18,6 @@ class VerifyOTPView(APIView):
         if serializer.is_valid():
             return Response(serializer.validated_data)
         return Response(serializer.errors, status=400)
-    
-
-
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
