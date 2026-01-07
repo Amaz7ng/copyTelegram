@@ -1,3 +1,95 @@
 from django.db import models
+from django.contrib.auth.models import AbstractUser
 
-# Create your models here.
+class User(AbstractUser):
+    search_handle = models.CharField(max_length=32, unique=True, db_index=True)
+
+class Chat(models.Model):
+    GROUP = 'group'
+    CHANNEL = 'channel'
+    CHAT_TYPES = [
+        (GROUP, 'Группа'),
+        (CHANNEL, 'Канал'),
+    ]
+    link_handle = models.CharField(max_length=32, unique=True, null=True, blank=True)
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    type = models.CharField(max_length=10, choices=CHAT_TYPES, default=GROUP)
+    created_at = models.DateTimeField(auto_now_add=True)
+    creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_chats')
+    
+    discussion_group = models.OneToOneField(
+        'self', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='linked_channel'
+    )
+
+    def __str__(self):
+        return self.title
+
+class ChatMember(models.Model):
+    ADMIN = 'admin'
+    MEMBER = 'member'
+    
+    ROLE_CHOICES = [
+        (ADMIN, 'Администратор'),
+        (MEMBER, 'Участник'),
+    ]
+
+    chat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name='members')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=MEMBER)
+    
+    can_change_info = models.BooleanField(default=False)
+    can_delete_messages = models.BooleanField(default=False)
+    can_ban_users = models.BooleanField(default=False)
+    can_invite_users = models.BooleanField(default=False)
+    can_pin_messages = models.BooleanField(default=False)
+    
+    can_add_admins = models.BooleanField(default=False)
+    
+    custom_title = models.CharField(
+        max_length=50, 
+        blank=True, 
+        null=True, 
+        verbose_name="Кастомный титул (префикс)"
+    )
+
+    can_manage_titles = models.BooleanField(
+        default=False, 
+        verbose_name="Может менять титулы другим"
+    )
+
+    class Meta:
+        unique_together = ('chat', 'user')
+
+    def __str__(self):
+        return f"{self.user.username} in {self.chat.title} ({self.role})"
+    
+class Message(models.Model):
+    chat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='messages')
+    
+    text = models.TextField(blank=True, null=True)
+    
+    file = models.FileField(upload_to='chat_files/', blank=True, null=True)
+    file_type = models.CharField(
+        max_length=20, 
+        choices=[('image', 'Фото'), ('video', 'Видео'), ('file', 'Файл'), ('link', 'Ссылка')],
+        blank=True, null=True
+    )
+    reply_to = models.ForeignKey(
+        'self', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='replies'
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_edited = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.sender.username}: {self.text[:20]}"
