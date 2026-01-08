@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <h1>Тест уведомлений</h1>
+    <div id="messages"></div>
+    <script>
+        // Замени на свои данные, если нужно
+        const socket = new WebSocket('ws://127.0.0.1:8000/ws/notifications/');
+
+        socket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            const msgDiv = document.getElementById('messages');
+            msgDiv.innerHTML += '<p style="color: green;">' + data.message + '</p>';
+            console.log('Пришло сообщение:', data);
+        };
+
+        socket.onopen = function() {
+            console.log('Соединение установлено!');
+        };
+
+        socket.onclose = function() {
+            console.error('Соединение закрыто');
+        };
+    </script>
+</body>
+</html>

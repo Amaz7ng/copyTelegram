@@ -93,7 +93,7 @@ services:
     container_name: django_chat
     command: >
       sh -c "python manage.py migrate &&
-             python manage.py runserver 0.0.0.0:8001"
+             daphne -b 0.0.0.0 -p 8001 core.asgi:application"
     volumes:
       - ./chat_service:/app
     ports:
@@ -103,6 +103,21 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+  chat_notifications_consumer:
+    build: ./chat_service
+    container_name: kafka_consumer_worker
+    command: python manage.py run_kafka_consumer
+    volumes:
+      - ./chat_service:/app
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9093
 
 volumes:
   postgres_data:
