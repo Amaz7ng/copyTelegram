@@ -7,16 +7,22 @@ class User(AbstractUser):
 class Chat(models.Model):
     GROUP = 'group'
     CHANNEL = 'channel'
+    DIRECT = 'direct'
     CHAT_TYPES = [
         (GROUP, 'Группа'),
         (CHANNEL, 'Канал'),
+        (DIRECT, 'Личная переписка'),
     ]
-    link_handle = models.CharField(max_length=32, unique=True, null=True, blank=True)
-    title = models.CharField(max_length=255)
-    description = models.TextField(blank=True)
     type = models.CharField(max_length=10, choices=CHAT_TYPES, default=GROUP)
+    title = models.CharField(max_length=255, blank=True, null=True)
+    link_handle = models.CharField(max_length=32, unique=True, null=True, blank=True)
+    description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_chats')
+    creator = models.ForeignKey(User, 
+                                on_delete=models.CASCADE, 
+                                related_name='created_chats',
+                                null=True,
+                                blank=True)
     
     discussion_group = models.OneToOneField(
         'self', 
@@ -27,7 +33,7 @@ class Chat(models.Model):
     )
 
     def __str__(self):
-        return self.title
+        return self.title if self.title else f"Direct Chat {self.id}"
 
 class ChatMember(models.Model):
     ADMIN = 'admin'

@@ -1,32 +1,19 @@
-import secrets
-import logging
-from datetime import timedelta 
-
-from .models import User
-
-from django.utils import timezone
-from django.contrib.auth.hashers import make_password
-
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth.hashers import make_password
+from datetime import timedelta
+from django.utils import timezone
 
-logger = logging.getLogger('users') 
-
+from .models import User
+from .services import send_otp_to_user
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         data = super().validate(attrs)
         
         if self.user.is_2fa_enabled:
-            otp = ''.join(secrets.choice('0123456789') for _ in range(6))
-            
-            self.user.otp_code = otp
-            self.user.otp_created_at = timezone.now()
-            self.user.save()
-
-            logger.info(f"Generated 2FA code for user {self.user.username}: {otp}")
-            # print(f"\n[2FA] КОД ДЛЯ ПОЛЬЗОВАТЕЛЯ {self.user.username}: {otp}\n")
+            send_otp_to_user(self.user)
 
             return {
                 "message": "OTP_SENT",
@@ -34,7 +21,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             }
         
         return data
-    
+
 class VerifyOTPSerializer(serializers.Serializer):
     username = serializers.CharField()
     otp_code = serializers.CharField(max_length=6)
@@ -52,10 +39,9 @@ class VerifyOTPSerializer(serializers.Serializer):
             raise serializers.ValidationError("Код не был сгенерирован")
         
         if timezone.now() > user.otp_created_at + timedelta(minutes=5):
-            logger.warning(f"OTP expired for user {user.username}")
             user.otp_code = None
             user.save()
-            raise serializers.ValidationError("Срок действия кода истек.Запросите новый.")
+            raise serializers.ValidationError("Срок действия кода истек.")
 
         if user.otp_code != otp_code:
             raise serializers.ValidationError("Неверный код подтверждения")
@@ -69,7 +55,7 @@ class VerifyOTPSerializer(serializers.Serializer):
             'refresh': str(refresh),
             'access': str(refresh.access_token),
         }
-        
+
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
 
