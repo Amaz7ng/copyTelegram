@@ -118,6 +118,19 @@ services:
         condition: service_healthy
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9093
+      - PYTHONUNBUFFERED=1
+  auth_worker:
+    build: ./auth_service  
+    container_name: auth_celery_worker
+    command: celery -A core worker -l info 
+    volumes:
+      - ./auth_service:/app
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - db
+      - kafka
 
 volumes:
   postgres_data:

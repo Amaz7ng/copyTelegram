@@ -24,6 +24,14 @@ class Chat(models.Model):
                                 null=True,
                                 blank=True)
     
+    last_message_link = models.ForeignKey(
+        'Message', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='last_in_chats'
+    )
+    
     discussion_group = models.OneToOneField(
         'self', 
         on_delete=models.SET_NULL, 
@@ -46,6 +54,7 @@ class ChatMember(models.Model):
 
     chat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name='members')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=MEMBER)
     
     can_change_info = models.BooleanField(default=False)
@@ -53,7 +62,6 @@ class ChatMember(models.Model):
     can_ban_users = models.BooleanField(default=False)
     can_invite_users = models.BooleanField(default=False)
     can_pin_messages = models.BooleanField(default=False)
-    
     can_add_admins = models.BooleanField(default=False)
     
     custom_title = models.CharField(
@@ -96,6 +104,16 @@ class Message(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     is_edited = models.BooleanField(default=False)
+    
+    def save(self, *args, **kwargs):   
+        is_new = self.id is None
+        
+        super().save(*args, **kwargs)
+        
+        if is_new:
+            chat = self.chat
+            chat.last_message_link = self
+            chat.save(update_fields=['last_message_link'])
 
     def __str__(self):
         return f"{self.sender.username}: {self.text[:20]}"

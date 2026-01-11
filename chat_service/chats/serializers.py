@@ -30,9 +30,10 @@ class ChatListSerializer(serializers.ModelSerializer):
         fields = ['id', 'type', 'title', 'last_message', 'interlocutor']
 
     def get_last_message(self, obj):
-        last_msg = obj.messages.order_by('-created_at').first()
-        return MessageSerializer(last_msg).data if last_msg else None
-
+        if obj.last_message_link:
+            return MessageSerializer(obj.last_message_link).data
+        return None
+    
     def get_interlocutor(self, obj):
         if obj.type == Chat.DIRECT:
 

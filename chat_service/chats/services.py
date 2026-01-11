@@ -1,4 +1,5 @@
 from .models import Chat, ChatMember, Message
+from django.db import transaction
 
 def get_or_create_direct_chat(user1, user2):
     """Находит или создает личный чат между двумя пользователями."""
@@ -9,10 +10,10 @@ def get_or_create_direct_chat(user1, user2):
     ).first()
 
     if not chat:
-        chat = Chat.objects.create(type=Chat.DIRECT)
-        ChatMember.objects.create(chat=chat, user=user1, role=ChatMember.MEMBER)
-        ChatMember.objects.create(chat=chat, user=user2, role=ChatMember.MEMBER)
-    
+        with transaction.atomic():
+            chat = Chat.objects.create(type=Chat.DIRECT)
+            ChatMember.objects.create(chat=chat, user=user1, role=ChatMember.MEMBER)
+            ChatMember.objects.create(chat=chat, user=user2, role=ChatMember.MEMBER)
     return chat
 
 def repost_to_discussion(message, discussion_group):

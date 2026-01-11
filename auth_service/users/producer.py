@@ -4,11 +4,12 @@ import asyncio
 from confluent_kafka import Producer, Message
 import socket
 from typing import Optional, Any, Dict
+from django.conf import settings
 
 logger = logging.getLogger('users')
 
 conf = {
-    'bootstrap.servers': 'kafka:9093',
+    'bootstrap.servers': settings.KAFKA_BOOTSTRAP_SERVERS,
     'client.id': socket.gethostname(),
     'queue.buffering.max.ms': 5, 
 }

@@ -13,7 +13,7 @@ urlpatterns = [
     
     path('api/register/', RegisterView.as_view(), name='auth_register'),
     
-    path('api/token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair' ),
+    path('  ', CustomTokenObtainPairView.as_view(), name='token_obtain_pair' ),
     
     path('api/token/verify-otp/', VerifyOTPView.as_view(), name='verify_otp'),
     

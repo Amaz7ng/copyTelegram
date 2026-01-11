@@ -16,6 +16,7 @@ logger = logging.getLogger('users')
 
 
 class User(AbstractUser):
+    email = models.EmailField(unique=True)
     bio = models.TextField(max_length=100, blank=True, verbose_name="о себе")
     phone_number = models.CharField(max_length=15, unique=True, null=True, blank=True, verbose_name="Номер телефона")
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True, verbose_name="Аватар")
@@ -42,33 +43,8 @@ class User(AbstractUser):
                 random_suffix = ''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=6))
                 self.search_handle = f"user_{random_suffix}"
         
-        # Принудительно переводим в нижний регистр для удобства поиска
         self.search_handle = self.search_handle.lower()
         super().save(*args, **kwargs)
     
     def __str__(self):
         return self.username
-    
-@receiver(post_save, sender=User)
-def user_created_sig(sender: Type[User], 
-                         instance: User, 
-                         created: bool, 
-                         **kwargs: Dict[str, Any]) -> None:
-        """
-    Сигнал: срабатывает ПОСЛЕ сохранения пользователя в базу.
-    """
-        if created:
-            data = {
-				'id': instance.id,
-				'username': instance.username,
-                'search_handle': instance.search_handle,
-				'email': instance.email,
-                'avatar': instance.avatar.url if instance.avatar else None
-    
-			}
-            
-            try:
-                from asgiref.sync import async_to_sync
-                async_to_sync(publish_user_created)(data)
-            except Exception as e:
-                logging.ERROR(f"Ошибка при запуске Kafka задачи: {e}")

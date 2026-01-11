@@ -6,8 +6,7 @@ def send_otp_to_user(user):
     otp = ''.join(secrets.choice('0123456789') for _ in range(6))
     user.otp_code = otp
     user.otp_created_at = timezone.now()
-    user.save()
+    user.save(update_fields=['otp_code', 'otp_created_at'])
     
-    # Здесь в будущем будет вызов API для SMS/Email
     print(f"--- OTP SENT TO {user.username}: {otp} ---")
     return otp
