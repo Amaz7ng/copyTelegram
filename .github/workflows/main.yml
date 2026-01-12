@@ -3,6 +3,8 @@ name: Django Microservices CI
 on:
   push:
     branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
 
 jobs:
   test-chat:
@@ -14,18 +16,26 @@ jobs:
           POSTGRES_DB: chat_db
           POSTGRES_USER: user
           POSTGRES_PASSWORD: password
-        ports: ["5432:5432"]
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
     - uses: actions/checkout@v3
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.12'
-    - name: Install dependencies
+
+    - name: Install Chat dependencies
       run: |
         pip install -r chat_service/requirements.txt
         pip install pytest pytest-django
+
     - name: Run Chat Tests
       env:
         DATABASE_URL: postgresql://user:password@localhost:5432/chat_db
@@ -33,7 +43,7 @@ jobs:
         SECRET_KEY: "temporary-secret-key-for-tests"
       run: |
         cd chat_service
-        pytest
+        pytest -v
 
   test-auth:
     runs-on: ubuntu-latest
@@ -44,17 +54,26 @@ jobs:
           POSTGRES_DB: auth_db
           POSTGRES_USER: user
           POSTGRES_PASSWORD: password
-        ports: ["5433:5432"]
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
     - uses: actions/checkout@v3
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.12'
-    - name: Install dependencies
+
+    - name: Install Auth dependencies
       run: |
         pip install -r auth_service/requirements.txt
         pip install pytest pytest-django
+
     - name: Run Auth Tests
       env:
         DATABASE_URL: postgresql://user:password@localhost:5433/auth_db
