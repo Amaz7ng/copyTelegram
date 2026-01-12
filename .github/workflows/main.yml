@@ -44,7 +44,7 @@ jobs:
           POSTGRES_DB: auth_db
           POSTGRES_USER: user
           POSTGRES_PASSWORD: password
-        ports: ["5432:5432"]
+        ports: ["5433:5432"]
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python
@@ -57,9 +57,9 @@ jobs:
         pip install pytest pytest-django
     - name: Run Auth Tests
       env:
-        DATABASE_URL: postgresql://user:password@localhost:5432/auth_db
+        DATABASE_URL: postgresql://user:password@localhost:5433/auth_db
         DJANGO_SETTINGS_MODULE: core.settings
         SECRET_KEY: "another-temporary-key"
       run: |
         cd auth_service
-        pytest
+        pytest -v
