@@ -8,7 +8,11 @@ env = environ.Env(
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-environ.Env.read_env(os.path.join(BASE_DIR.parent, '.env'))
+env_file = os.path.join(BASE_DIR, '.env')
+if not os.path.exists(env_file):
+    env_file = os.path.join(BASE_DIR.parent, '.env')
+
+environ.Env.read_env(env_file)
 
 SECRET_KEY = env('SECRET_KEY')
 DEBUG = env('DEBUG')
@@ -22,6 +26,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
     'users',
 ]
 

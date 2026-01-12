@@ -8,8 +8,6 @@ from django.contrib.auth.models import AbstractUser
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from .producer import publish_user_created
-
 from typing import Any, Dict, Type
 
 logger = logging.getLogger('users') 
