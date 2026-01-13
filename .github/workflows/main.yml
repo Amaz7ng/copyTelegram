@@ -79,6 +79,9 @@ jobs:
         DATABASE_URL: postgresql://user:password@localhost:5433/auth_db
         DJANGO_SETTINGS_MODULE: core.settings
         SECRET_KEY: "another-temporary-key"
+        CELERY_BROKER_URL: "memory://"
+        CELERY_TASK_ALWAYS_EAGER: "True"
+        CELERY_TASK_EAGER_PROPAGATES: "True"
       run: |
         cd auth_service
         pytest -v
