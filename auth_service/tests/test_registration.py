@@ -6,7 +6,7 @@ from unittest.mock import patch
 User = get_user_model()
 
 class RegistrationTests(APITestCase):
-    # @patch('users.tasks.task_publish_user_to_kafka.delay')
+    @patch('users.tasks.task_publish_user_to_kafka.delay')
     def test_registration(self):
         url = reverse('auth_register')
         data = {
