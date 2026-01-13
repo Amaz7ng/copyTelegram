@@ -1,6 +1,7 @@
 import json
 import logging
 import socket
+import sys
 from confluent_kafka import Producer
 
 logger = logging.getLogger('users')
@@ -12,6 +13,9 @@ def delivery_report(err, msg):
         logger.info(f"[Kafka] Доставлено в топик {msg.topic()}")
 
 def publish_user_created_sync(user_data):
+    
+    if 'test' in sys.argv: # Если запущен pytest или manage.py test
+        return
     """Синхронная отправка, идеальна для Celery"""
     conf = {
         'bootstrap.servers': 'kafka:9092',

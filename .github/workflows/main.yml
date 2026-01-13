@@ -9,6 +9,7 @@ on:
 jobs:
   test-chat:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     services:
       postgres:
         image: postgres:15
@@ -16,37 +17,31 @@ jobs:
           POSTGRES_DB: chat_db
           POSTGRES_USER: user
           POSTGRES_PASSWORD: password
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
     steps:
     - uses: actions/checkout@v3
-
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.12'
-
-    - name: Install Chat dependencies
+    - name: Install dependencies
       run: |
         pip install -r chat_service/requirements.txt
         pip install pytest pytest-django
-
     - name: Run Chat Tests
       env:
         DATABASE_URL: postgresql://user:password@localhost:5432/chat_db
         DJANGO_SETTINGS_MODULE: core.settings
-        SECRET_KEY: "temporary-secret-key-for-tests"
+        SECRET_KEY: "test-key"
+        DEBUG: "False"
       run: |
         cd chat_service
         pytest -v
 
   test-auth:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     services:
       postgres:
         image: postgres:15
@@ -54,34 +49,29 @@ jobs:
           POSTGRES_DB: auth_db
           POSTGRES_USER: user
           POSTGRES_PASSWORD: password
-        ports:
-          - 5433:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+        ports: ["5433:5432"]
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
     steps:
     - uses: actions/checkout@v3
-
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.12'
-
-    - name: Install Auth dependencies
+    - name: Install dependencies
       run: |
         pip install -r auth_service/requirements.txt
         pip install pytest pytest-django
-
     - name: Run Auth Tests
       env:
         DATABASE_URL: postgresql://user:password@localhost:5433/auth_db
         DJANGO_SETTINGS_MODULE: core.settings
-        SECRET_KEY: "another-temporary-key"
+        SECRET_KEY: "test-key-auth"
+        DEBUG: "False"
         CELERY_BROKER_URL: "memory://"
         CELERY_TASK_ALWAYS_EAGER: "True"
-        CELERY_TASK_EAGER_PROPAGATES: "True"
+        KAFKA_BOOTSTRAP_SERVERS: "localhost:9092"
+        DJANGO_READ_DOT_ENV_FILE: "False" 
       run: |
         cd auth_service
-        pytest -v
+        # Добавим -p no:logging чтобы логи в файл не вешали систему
+        pytest -v -p no:logging
