@@ -67,7 +67,7 @@ jobs:
         DJANGO_SETTINGS_MODULE: core.settings
         SECRET_KEY: "test-key-auth"
         DEBUG: "False"
-        REDIS_URL: "locmemcache://"
+        REDIS_URL: "dummy://"
         CELERY_BROKER_URL: "memory://"
         KAFKA_BOOTSTRAP_SERVERS: ""
         CELERY_TASK_ALWAYS_EAGER: "True"
