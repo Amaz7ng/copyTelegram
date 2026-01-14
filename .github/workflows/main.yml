@@ -67,12 +67,11 @@ jobs:
         DJANGO_SETTINGS_MODULE: core.settings
         SECRET_KEY: "test-key-auth"
         DEBUG: "False"
-        REDIS_URL: "dummy://"
+        REDIS_URL: "locmemcache://"
         CELERY_BROKER_URL: "memory://"
         KAFKA_BOOTSTRAP_SERVERS: ""
         CELERY_TASK_ALWAYS_EAGER: "True"
         DJANGO_READ_DOT_ENV_FILE: "False" 
       run: |
         cd auth_service
-        # Добавим -p no:logging чтобы логи в файл не вешали систему
-        pytest -v -p no:logging --durations=5
+        pytest -v -p no:logging --durations=5 --no-migrations
