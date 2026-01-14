@@ -49,8 +49,13 @@ jobs:
           POSTGRES_DB: auth_db
           POSTGRES_USER: user
           POSTGRES_PASSWORD: password
-        ports: ["5432:5432"]
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+        ports:
+          - 5432:5432 # Как в чате!
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python
@@ -69,9 +74,8 @@ jobs:
         DEBUG: "False"
         REDIS_URL: "locmemcache://"
         CELERY_BROKER_URL: "memory://"
-        KAFKA_BOOTSTRAP_SERVERS: ""
         CELERY_TASK_ALWAYS_EAGER: "True"
-        DJANGO_READ_DOT_ENV_FILE: "False" 
+        DJANGO_READ_DOT_ENV_FILE: "False"
       run: |
         cd auth_service
-        pytest -v -p no:logging --durations=5 --no-migrations
+        pytest -v -p no:logging
