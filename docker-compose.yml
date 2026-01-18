@@ -121,7 +121,21 @@ services:
   chat_notifications_consumer:
     build: ./chat_service
     container_name: kafka_consumer_worker
-    command: python -u manage.py run_kafka_consumer
+    command: sh -c "sleep 10 && python -u manage.py run_kafka_consumer"
+    volumes:
+      - ./chat_service:/app
+    env_file:
+      - ./chat_service/.env
+    depends_on:
+      kafka:
+        condition: service_started
+      redis:
+        condition: service_healthy
+
+  chat_messages_notifications:
+    build: ./chat_service
+    container_name: chat_notifications_worker
+    command: sh -c "sleep 12 && python manage.py run_notifications_consumer"
     volumes:
       - ./chat_service:/app
     env_file:

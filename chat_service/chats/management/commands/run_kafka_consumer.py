@@ -31,7 +31,7 @@ class Command(BaseCommand):
 
         try:
             while True:
-                msg = consumer.poll(1.0)
+                msg = consumer.poll(2.0)
 
                 if msg is None:
                     continue

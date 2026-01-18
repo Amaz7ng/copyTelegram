@@ -3,6 +3,8 @@ from django.contrib.auth.models import AbstractUser
 
 class User(AbstractUser):
     search_handle = models.CharField(max_length=32, unique=True, db_index=True)
+    
+    REQUIRED_FIELDS = ['search_handle', 'email']
 
 class Chat(models.Model):
     GROUP = 'group'
@@ -94,6 +96,8 @@ class Message(models.Model):
         choices=[('image', 'Фото'), ('video', 'Видео'), ('file', 'Файл'), ('link', 'Ссылка')],
         blank=True, null=True
     )
+    is_read = models.BooleanField(default=False)
+    is_edited = models.BooleanField(default=False)
     reply_to = models.ForeignKey(
         'self', 
         on_delete=models.SET_NULL, 
