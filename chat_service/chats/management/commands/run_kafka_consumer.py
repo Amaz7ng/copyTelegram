@@ -39,9 +39,16 @@ class Command(BaseCommand):
                 if msg.error():
                     if msg.error().code() == KafkaError._PARTITION_EOF:
                         continue
+                    
+                    elif msg.error().code() == KafkaError.UNKNOWN_TOPIC_OR_PART:
+                        self.stdout.write(self.style.WARNING(f"Ожидаю создания топика {topic}..."))
+                        continue
+                    
                     else:
-                        self.stdout.write(self.style.ERROR(f"Ошибка Kafka: {msg.error()}"))
-                        break
+                        self.stdout.write(self.style.ERROR(f"Критическая ошибка Kafka: {msg.error()}"))
+                        import time
+                        time.sleep(5)
+                        continue
 
                 try:
                     raw_value = msg.value().decode('utf-8')

@@ -121,7 +121,8 @@ services:
   chat_notifications_consumer:
     build: ./chat_service
     container_name: kafka_consumer_worker
-    command: sh -c "sleep 10 && python -u manage.py run_kafka_consumer"
+    command: sh -c "sleep 15 && python -u manage.py run_kafka_consumer"
+    restart: on-failure
     volumes:
       - ./chat_service:/app
     env_file:
@@ -135,7 +136,7 @@ services:
   chat_messages_notifications:
     build: ./chat_service
     container_name: chat_notifications_worker
-    command: sh -c "sleep 12 && python manage.py run_notifications_consumer"
+    command: sh -c "sleep 15 && python manage.py run_notifications_consumer"
     volumes:
       - ./chat_service:/app
     env_file:
@@ -160,6 +161,7 @@ services:
   media_service:
     build: ./media_service
     container_name: fastapi_media
+    command: sh -c "sleep 15 && uvicorn main:app --host 0.0.0.0 --port 8002"
     ports:
       - "8002:8002"
     env_file:
@@ -171,14 +173,17 @@ services:
   media_processor_go:
     build: ./media_processor_go
     container_name: go_thumbnailer
-    env_file:
-      - ./media_processor_go/.env
+    environment:
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=media_admin
+      - MINIO_SECRET_KEY=media_password
     depends_on:
       - kafka
       - minio
-    volumes:
-      - ./media_processor_go:/app
+    # volumes:
+    #   - ./media_processor_go:/app
 
 volumes:
   postgres_data:
   chat_data:
+  minio_data:

@@ -4,7 +4,7 @@ import redis
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from .models import Message, Chat, ChatMember
-from ..utils.kafka_producer import send_notification_to_kafka
+from utils.kafka_producer import send_notification_to_kafka
 
 r = redis.Redis(host='auth_redis', port=6379, db=0, decode_responses=True)
 
