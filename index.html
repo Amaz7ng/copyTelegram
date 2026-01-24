@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Project - Fixed</title>
+    <style>
+        :root { --main-color: #0088cc; --bg-color: #e6ebee; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg-color); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 400px; transition: all 0.3s; }
+        .hidden { display: none !important; }
+        h2 { text-align: center; color: var(--main-color); margin-top: 0; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; outline: none; }
+        input:focus { border-color: var(--main-color); }
+        button { width: 100%; padding: 12px; margin-top: 10px; border-radius: 8px; border: none; background: var(--main-color); color: white; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #0077b5; }
+        .toggle-link { text-align: center; font-size: 14px; color: var(--main-color); cursor: pointer; margin-top: 15px; }
+
+        #messages { height: 350px; overflow-y: auto; border: 1px solid #f0f0f0; padding: 10px; margin: 10px 0; display: flex; flex-direction: column; gap: 8px; background: #f9f9f9; border-radius: 8px; }
+        .msg { padding: 8px 12px; border-radius: 12px; max-width: 85%; font-size: 14px; line-height: 1.4; word-wrap: break-word; position: relative; }
+        .my { align-self: flex-end; background: #effdde; border: 1px solid #c8e6c9; }
+        .their { align-self: flex-start; background: white; border: 1px solid #e0e0e0; }
+        .msg-sender { font-size: 11px; font-weight: bold; color: var(--main-color); margin-bottom: 3px; }
+        
+        .search-box { display: flex; gap: 5px; }
+        .search-box input { margin: 0; }
+        .search-box button { margin: 0; width: auto; }
+        #error-msg { color: #d9534f; font-size: 12px; text-align: center; min-height: 15px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+    <div id="auth-card" class="card">
+        <h2 id="auth-title">Вход</h2>
+        <div id="error-msg"></div>
+        <input type="text" id="username" placeholder="Логин (username)">
+        <input type="email" id="email" class="hidden" placeholder="Email">
+        <input type="password" id="password" placeholder="Пароль">
+        <button id="main-btn" onclick="handleAuth()">Войти</button>
+        <div class="toggle-link" id="toggle-auth" onclick="toggleMode()">Нет аккаунта? Зарегистрироваться</div>
+    </div>
+
+    <div id="chat-card" class="card hidden">
+        <div class="search-box">
+            <input type="text" id="user-search" placeholder="Введите ник друга...">
+            <button onclick="searchUser()">🔍</button>
+        </div>
+        <div id="chat-info" style="font-size: 12px; color: #666; margin-top: 8px; text-align: center;">
+            Найдите пользователя, чтобы начать общение
+        </div>
+
+        <div id="messages"></div>
+
+        <input type="text" id="message-text" placeholder="Напишите сообщение...">
+        <div style="display: flex; gap: 5px; align-items: center;">
+            <input type="file" id="image-file" accept="image/*" style="font-size: 10px; border: none; padding: 0;">
+            <button onclick="sendMessage()" style="width: 100px; margin: 0; padding: 8px;">Отправить</button>
+        </div>
+        <button onclick="logout()" style="background: transparent; color: #999; font-size: 11px; margin-top: 15px; border: none; text-decoration: underline;">Выйти из системы</button>
+    </div>
+
+    <script>
+        const API_BASE = "http://localhost/api";
+        let accessToken = localStorage.getItem('token');
+        let myUsername = localStorage.getItem('myUsername');
+        let isLoginMode = true;
+        let activeChatId = null; 
+        let currentReceiverId = null;
+
+        function toggleMode() {
+            isLoginMode = !isLoginMode;
+            document.getElementById('auth-title').innerText = isLoginMode ? "Вход" : "Регистрация";
+            document.getElementById('main-btn').innerText = isLoginMode ? "Войти" : "Создать аккаунт";
+            document.getElementById('toggle-auth').innerText = isLoginMode ? "Зарегистрироваться" : "Уже есть аккаунт? Войти";
+            document.getElementById('email').classList.toggle('hidden', isLoginMode);
+            document.getElementById('error-msg').innerText = "";
+        }
+
+        async function handleAuth() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const email = document.getElementById('email').value;
+            const endpoint = isLoginMode ? "/auth/login/" : "/auth/register/";
+            const payload = isLoginMode ? { username, password } : { username, password, email };
+
+            try {
+                const resp = await fetch(API_BASE + endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await resp.json();
+                
+                if (resp.ok) {
+                    if (isLoginMode) {
+                        accessToken = data.access;
+                        myUsername = username;
+                        localStorage.setItem('token', accessToken);
+                        localStorage.setItem('myUsername', myUsername);
+                        initChat();
+                    } else {
+                        alert("Регистрация успешна! Теперь войдите.");
+                        toggleMode();
+                    }
+                } else {
+                    document.getElementById('error-msg').innerText = "Ошибка: " + (data.detail || JSON.stringify(data));
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        function initChat() {
+            document.getElementById('auth-card').classList.add('hidden');
+            document.getElementById('chat-card').classList.remove('hidden');
+            // Запуск цикла обновления сообщений
+            setInterval(() => { if(activeChatId) loadMessages(); }, 3000);
+        }
+
+        async function searchUser() {
+            const username = document.getElementById('user-search').value;
+            if (!username) return;
+
+            try {
+                const resp = await fetch(`${API_BASE}/auth/users/?search=${username}`, {
+                    headers: { 'Authorization': 'Bearer ' + accessToken }
+                });
+                if (!resp.ok) return alert("Ошибка при поиске");
+
+                const users = await resp.json();
+                const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+
+                if (user) {
+                    currentReceiverId = user.id;
+                    document.getElementById('chat-info').innerHTML = `Чат с: <b>${user.username}</b>`;
+                    activeChatId = null; 
+                    document.getElementById('messages').innerHTML = "";
+                } else {
+                    alert("Пользователь не найден");
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        async function loadMessages() {
+            if (!accessToken || !activeChatId) return;
+            try {
+                const resp = await fetch(`${API_BASE}/messages/?chat=${activeChatId}`, {
+                    headers: { 'Authorization': 'Bearer ' + accessToken }
+                });
+                const messages = await resp.json();
+                renderMessages(messages);
+            } catch (err) { console.error("Ошибка загрузки сообщений"); }
+        }
+
+        function renderMessages(msgs) {
+            const container = document.getElementById('messages');
+            const html = msgs.map(m => {
+                const isMy = m.sender_username === myUsername;
+                
+                // --- НАЧАЛО ИСПРАВЛЕНИЯ ---
+                let imageUrl = null;
+                if (m.file) {
+                    // 1. Получаем "чистое" имя файла.
+                    // .split('/') разбивает строку по слэшам
+                    // .pop() берет последний элемент (само имя файла: uuid.jpg)
+                    const cleanFileName = m.file.split('/').pop(); 
+                    
+                    // 2. Формируем правильную ссылку на FastAPI (порт 8002)
+                    imageUrl = `http://localhost:8002/media/${cleanFileName}`;
+                }
+                // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
+
+                return `
+                    <div class="msg ${isMy ? 'my' : 'their'}">
+                        <div class="msg-sender">${m.sender_username}</div>
+                        ${m.text ? `<div>${m.text}</div>` : ''}
+                        
+                        ${imageUrl ? `<img src="${imageUrl}" style="max-width:100%; border-radius:5px; margin-top:5px;">` : ''}
+                    </div>
+                `;
+            }).join('');
+            
+            if (container.innerHTML !== html) {
+                container.innerHTML = html;
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+
+        async function sendMessage() {
+            const textInput = document.getElementById('message-text');
+            const fileInput = document.getElementById('image-file');
+            if (!textInput.value && !fileInput.files[0]) return;
+
+            const formData = new FormData();
+            formData.append('text', textInput.value);
+            
+            if (activeChatId) {
+                formData.append('chat', activeChatId);
+            } else if (currentReceiverId) {
+                formData.append('receiver_id', currentReceiverId);
+            } else {
+                return alert("Сначала найдите пользователя через поиск");
+            }
+
+            if (fileInput.files[0]) formData.append('file', fileInput.files[0]);
+
+            try {
+                const resp = await fetch(`${API_BASE}/messages/`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + accessToken },
+                    body: formData
+                });
+                const data = await resp.json();
+                
+                if (resp.ok) {
+                    activeChatId = data.chat;
+                    textInput.value = '';
+                    fileInput.value = '';
+                    loadMessages();
+                } else {
+                    alert(data.error || "Ошибка при отправке");
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        function logout() { 
+            localStorage.clear(); 
+            location.reload(); 
+        }
+
+        // Авто-логин если токен есть
+        if (accessToken) initChat();
+    </script>
+</body>
+</html>

@@ -5,19 +5,18 @@ from django.conf.urls.static import static
 
 from rest_framework_simplejwt.views import TokenRefreshView
 
-from users.views import CustomTokenObtainPairView, VerifyOTPView, RegisterView
+from users.views import CustomTokenObtainPairView, VerifyOTPView, RegisterView, UserSearchView
 
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     
-    path('api/register/', RegisterView.as_view(), name='auth_register'),
+    path('api/auth/register/', RegisterView.as_view(), name='auth_register'),
+    path('api/auth/users/', UserSearchView.as_view(), name='user_search'), # ДОБАВИТЬ ЭТО
+    path('api/auth/login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     
-    path('', CustomTokenObtainPairView.as_view(), name='token_obtain_pair' ),
-    
-    path('api/token/verify-otp/', VerifyOTPView.as_view(), name='verify_otp'),
-    
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh' ),
+    path('api/auth/verify-otp/', VerifyOTPView.as_view(), name='verify_otp'),
+    path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]
 
 if settings.DEBUG:

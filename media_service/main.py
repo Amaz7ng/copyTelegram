@@ -1,14 +1,14 @@
 import os
-import boto3
-import uuid
-import asyncio
 import re
-from contextlib import asynccontextmanager
-from fastapi import FastAPI, UploadFile, File, HTTPException
-from botocore.client import Config
+import uuid
+import boto3
+import asyncio
 from dotenv import load_dotenv
-
+from botocore.client import Config
+from contextlib import asynccontextmanager
+from fastapi.responses import StreamingResponse
 from kafka_utils import producer, send_media_task
+from fastapi import FastAPI, UploadFile, File, HTTPException
 
 load_dotenv()
 
@@ -96,6 +96,47 @@ async def upload_file(file: UploadFile = File(...)):
     except Exception as e:
         print(f"UPLOAD ERROR: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Ошибка при загрузке: {str(e)}")
+    
+@app.delete("/delete/{file_name}")
+async def delete_file(file_name: str):
+    try:
+        loop = asyncio.get_event_loop()
+
+        await loop.run_in_executor(
+            None, 
+            lambda: s3.delete_object(Bucket=BUCKET_NAME, Key=file_name)
+        )
+        print(f"DELETE: Оригинал {file_name} удален из {BUCKET_NAME}")
+        thumb_name = f"thumb_{file_name}"
+        await loop.run_in_executor(
+            None, 
+            lambda: s3.delete_object(Bucket="thumbnails", Key=thumb_name)
+        )
+        print(f"DELETE: Миниатюра {thumb_name} удалена из thumbnails")
+
+        return {"status": "success", "message": f"Файлы {file_name} удалены"}
+        
+    except Exception as e:
+        print(f"DELETE ERROR: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Ошибка при удалении: {str(e)}")
+    
+@app.get("/media/{file_name}")
+async def get_file(file_name: str):
+    try:
+        # Пытаемся забрать файл из бакета
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None,
+            lambda: s3.get_object(Bucket=BUCKET_NAME, Key=file_name)
+        )
+        # Отдаем поток байтов напрямую в браузер
+        return StreamingResponse(
+            response['Body'], 
+            media_type=response.get('ContentType', 'image/jpeg')
+        )
+    except Exception as e:
+        print(f"GET ERROR: {str(e)}")
+        raise HTTPException(status_code=404, detail="Файл не найден в хранилище")
 
 @app.get("/health")
 def health_check():

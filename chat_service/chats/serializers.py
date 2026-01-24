@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import ChatMember, Message, Chat
-
+import os
 
 class MessageSerializer(serializers.ModelSerializer):
     sender_username = serializers.ReadOnlyField(source='sender.username')
@@ -19,6 +19,11 @@ class MessageSerializer(serializers.ModelSerializer):
     def get_sender_prefix(self, obj):
         member = ChatMember.objects.filter(chat=obj.chat, user=obj.sender).first()
         return member.custom_title if member else None
+    
+    def get_file(self, obj):
+        if obj.file:
+            return os.path.basename(obj.file.name)
+        return None
     
     
 class ChatListSerializer(serializers.ModelSerializer):

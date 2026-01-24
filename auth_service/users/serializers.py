@@ -4,6 +4,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.hashers import make_password
 from datetime import timedelta
 from django.utils import timezone
+from rest_framework.serializers import ModelSerializer
 
 from .models import User
 from .services import send_otp_to_user
@@ -66,3 +67,8 @@ class RegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data['password'] = make_password(validated_data['password'])
         return super().create(validated_data)
+    
+class UserSearchSerializer(ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username']
