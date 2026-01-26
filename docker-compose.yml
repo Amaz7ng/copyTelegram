@@ -188,8 +188,10 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
-      - ./chat_service/staticfiles:/app/staticfiles
+    - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    - ./nginx/proxy_params:/etc/nginx/proxy_params
+    - ./chat_service/staticfiles:/app/staticfiles
+    - ./nginx/index.html:/usr/share/nginx/html/index.html
     depends_on:
       - chat_service
       - media_service

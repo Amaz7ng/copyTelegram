@@ -16,7 +16,7 @@ environ.Env.read_env(env_file)
 
 SECRET_KEY = env('SECRET_KEY')
 DEBUG = env('DEBUG')
-ALLOWED_HOSTS = ['*']
+# ALLOWED_HOSTS = ['*']
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -127,3 +127,13 @@ CORS_ALLOW_CREDENTIALS = True
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+
+# Разрешаем Django принимать запросы с этого домена
+ALLOWED_HOSTS = ['my-super-chat-2026.loca.lt', 'localhost', '127.0.0.1', 'django_auth', 'django_chat']
+
+# КРИТИЧЕСКИ ВАЖНО для работы через туннель:
+CSRF_TRUSTED_ORIGINS = ["https://*.loca.lt", "http://localhost"]
+
+# Чтобы Django понимал, что запрос пришел через HTTPS (туннель это делает)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

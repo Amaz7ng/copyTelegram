@@ -3,602 +3,270 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MegaChat</title>
+    <title>MegaChat 2026</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* === ОСНОВНЫЕ СТИЛИ (ТЕМНАЯ ТЕМА) === */
+        /* === ОСНОВНЫЕ СТИЛИ === */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            display: flex;
-            height: 100vh;
-            background-color: #0f0f0f;
-            color: #ffffff;
-            overflow: hidden;
+            margin: 0; display: flex; height: 100vh;
+            background-color: #0f0f0f; color: #ffffff; overflow: hidden;
         }
 
-        /* === БОКОВАЯ ПАНЕЛЬ === */
         .sidebar {
-            width: 300px;
-            background-color: #212121;
-            border-right: 1px solid #2f2f2f;
-            display: flex;
-            flex-direction: column;
-            flex-shrink: 0;
+            width: 300px; background-color: #212121;
+            border-right: 1px solid #2f2f2f; display: flex; flex-direction: column;
         }
 
-        .sidebar-header {
-            padding: 15px;
-            background-color: #2c2c2c;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .sidebar-header h3 { margin: 0; font-size: 1.2rem; }
-
-        /* КНОПКИ УПРАВЛЕНИЯ (Создать группу/канал) */
-        .action-buttons {
-            display: flex;
-            justify-content: space-around;
-            padding: 10px;
-            background-color: #1e1e1e;
-            border-bottom: 1px solid #333;
-        }
-
-        .icon-btn {
-            background: none;
-            border: none;
-            color: #aaaaaa;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: color 0.3s;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .icon-btn:hover { color: #40a7e3; }
-        .icon-btn i { font-size: 1.2rem; }
-
-        /* ПОИСК */
-        .search-container {
-            padding: 10px;
-            border-bottom: 1px solid #2f2f2f;
-        }
-
-        .search-container input {
-            width: 100%;
-            padding: 8px;
-            border-radius: 20px;
-            border: none;
-            background-color: #0f0f0f;
-            color: white;
-            padding-left: 15px;
-            box-sizing: border-box;
-        }
-
-        /* СПИСОК ЧАТОВ */
-        .chat-list {
-            flex: 1;
-            overflow-y: auto;
-        }
-
+        .sidebar-header { padding: 15px; background-color: #2c2c2c; display: flex; justify-content: space-between; align-items: center; }
+        
+        .chat-list { flex: 1; overflow-y: auto; }
         .chat-item {
-            padding: 15px;
-            cursor: pointer;
-            border-bottom: 1px solid #2f2f2f;
-            display: flex;
-            align-items: center;
+            padding: 15px; cursor: pointer; border-bottom: 1px solid #2f2f2f;
+            display: flex; align-items: center; transition: 0.2s;
         }
-
         .chat-item:hover { background-color: #2b2b2b; }
-        .chat-item.active { background-color: #40a7e3; color: white; }
-        
-        .avatar {
-            width: 40px;
-            height: 40px;
-            background-color: #555;
-            border-radius: 50%;
-            margin-right: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            color: #fff;
-            flex-shrink: 0;
-        }
+        .chat-item.active { background-color: #40a7e3; }
 
-        .chat-info { flex: 1; overflow: hidden; }
-        .chat-name { font-weight: bold; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .last-message { font-size: 0.85rem; color: #aaaaaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .chat-item.active .last-message { color: #e0e0e0; }
-
-        /* === ОКНО ЧАТА === */
         .chat-area {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background-image: url('https://w.forfun.com/fetch/9d/9db2d4683d92f5f208dc034749669530.jpeg'); /* Темный фон */
-            background-size: cover;
-            position: relative;
-        }
-        
-        /* Затемнение фона */
-        .chat-area::before {
-            content: "";
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(15, 15, 15, 0.85);
-            z-index: 0;
-        }
-
-        .chat-header {
-            padding: 15px;
-            background-color: #212121;
-            border-bottom: 1px solid #2f2f2f;
-            z-index: 1;
-            display: flex;
-            align-items: center;
+            flex: 1; display: flex; flex-direction: column;
+            background: rgba(15, 15, 15, 0.9); position: relative;
         }
 
         .messages {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            z-index: 1;
+            flex: 1; padding: 20px; overflow-y: auto;
+            display: flex; flex-direction: column; gap: 10px; z-index: 1;
         }
 
-        /* СООБЩЕНИЯ */
         .message {
-            max-width: 60%;
-            padding: 10px 15px;
-            border-radius: 10px;
-            position: relative;
-            word-wrap: break-word;
-            font-size: 0.95rem;
-            line-height: 1.4;
+            max-width: 60%; padding: 10px 15px; border-radius: 10px;
+            background-color: #212121; align-self: flex-start; line-height: 1.4;
         }
+        .message.sent { background-color: #40a7e3; align-self: flex-end; }
+        .message img { max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; }
 
-        .message.received {
-            background-color: #212121;
-            align-self: flex-start;
-            border-bottom-left-radius: 0;
-        }
-
-        .message.sent {
-            background-color: #40a7e3; /* Цвет телеграм */
-            align-self: flex-end;
-            border-bottom-right-radius: 0;
-        }
-        
-        .message img {
-            max-width: 100%;
-            border-radius: 8px;
-            margin-top: 5px;
-            cursor: pointer;
-        }
-
-        .message-meta {
-            font-size: 0.7rem;
-            text-align: right;
-            margin-top: 5px;
-            opacity: 0.7;
-        }
-
-        /* ПОЛЕ ВВОДА */
         .input-area {
-            padding: 15px;
-            background-color: #212121;
-            display: flex;
-            align-items: center;
-            z-index: 1;
-            border-top: 1px solid #2f2f2f;
+            padding: 15px; background-color: #212121;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .input-area input[type="text"] {
+            flex: 1; padding: 12px; border-radius: 20px;
+            border: 1px solid #333; background: #0f0f0f; color: white;
         }
 
-        .input-area input {
-            flex: 1;
-            padding: 12px;
-            border-radius: 20px;
-            border: 1px solid #333;
-            background-color: #0f0f0f;
-            color: white;
-            margin: 0 10px;
-        }
-
-        .attach-btn, .send-btn {
-            background: none;
-            border: none;
-            color: #aaaaaa;
-            font-size: 1.3rem;
-            cursor: pointer;
-            padding: 0 10px;
-            transition: color 0.2s;
-        }
-
-        .attach-btn:hover, .send-btn:hover { color: #40a7e3; }
-
-        /* СКРЫТЫЙ INPUT ДЛЯ ФАЙЛОВ */
-        #file-input { display: none; }
-
-        /* ЭКРАН ЛОГИНА (ПРОСТОЙ) */
         #login-screen {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: #0f0f0f;
-            z-index: 1000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0f0f0f; z-index: 1000; display: flex;
+            justify-content: center; align-items: center; flex-direction: column;
         }
-        #login-screen input {
-            padding: 10px; margin: 5px; width: 250px;
-            background: #212121; border: 1px solid #333; color: white;
-        }
-        #login-screen button {
-            padding: 10px 20px; background: #40a7e3; border: none; color: white; cursor: pointer;
-        }
-
+        #login-screen input { padding: 10px; margin: 5px; width: 250px; background: #212121; border: 1px solid #333; color: white; }
+        #login-screen button { padding: 10px 20px; background: #40a7e3; border: none; color: white; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <div id="login-screen">
         <h2>MegaChat Login</h2>
-        <input type="text" id="username" placeholder="Логин">
+        <input type="text" id="username" placeholder="Логин (username)">
         <input type="password" id="password" placeholder="Пароль">
         <button onclick="login()">Войти</button>
-        <p id="login-error" style="color: red; display: none;">Ошибка входа</p>
+        <p id="login-error" style="color: red; display: none; margin-top: 10px;"></p>
     </div>
 
     <div class="sidebar">
         <div class="sidebar-header">
-            <h3>MegaChat</h3>
-            <button onclick="logout()" style="background:none; border:none; color: #888; cursor:pointer;">
+            <h3>Чаты</h3>
+            <button onclick="logout()" title="Выйти" style="background:none; border:none; color: #888; cursor:pointer;">
                 <i class="fas fa-sign-out-alt"></i>
             </button>
         </div>
-
-        <div class="action-buttons">
-            <button class="icon-btn" onclick="createNewChat('personal')" title="Личный чат">
-                <i class="fas fa-user-plus"></i>
-                <span style="font-size: 0.7rem;">Чат</span>
-            </button>
-            <button class="icon-btn" onclick="createNewChat('group')" title="Создать группу">
-                <i class="fas fa-users"></i>
-                <span style="font-size: 0.7rem;">Группа</span>
-            </button>
-            <button class="icon-btn" onclick="createNewChat('channel')" title="Создать канал">
-                <i class="fas fa-bullhorn"></i>
-                <span style="font-size: 0.7rem;">Канал</span>
-            </button>
-        </div>
-
-        <div class="search-container">
-            <input type="text" id="search-input" placeholder="Поиск чатов..." oninput="handleSearch()">
-        </div>
-
         <div class="chat-list" id="chat-list">
             </div>
     </div>
 
     <div class="chat-area">
-        <div class="chat-header" id="chat-header">
-            <div id="chat-title" style="font-weight: bold;">Выберите чат</div>
-            <div id="chat-status" style="font-size: 0.8rem; color: #aaa; margin-left: 10px;"></div>
+        <div id="chat-header" style="padding: 15px; background: #212121; border-bottom: 1px solid #2f2f2f;">
+            <span id="chat-title" style="font-weight: bold;">Выберите чат</span>
+            <small id="chat-status" style="margin-left: 10px;"></small>
         </div>
 
-        <div class="messages" id="messages-container">
-            <div style="text-align: center; color: #888; margin-top: 50px;">
-                Нет открытых чатов
-            </div>
-        </div>
+        <div class="messages" id="messages-container"></div>
 
         <div class="input-area">
-            <button class="attach-btn" onclick="document.getElementById('file-input').click()">
+            <button onclick="document.getElementById('file-input').click()" style="background:none; border:none; color:#aaa; cursor:pointer; font-size: 1.2rem;">
                 <i class="fas fa-paperclip"></i>
             </button>
-            <input type="file" id="file-input" accept="image/*" onchange="uploadFile()">
-
-            <input type="text" id="message-input" placeholder="Напишите сообщение..." onkeypress="handleKeyPress(event)">
-            
-            <button class="send-btn" onclick="sendMessage()">
+            <input type="file" id="file-input" style="display:none" onchange="uploadFile()">
+            <input type="text" id="message-input" placeholder="Напишите сообщение..." onkeypress="if(event.key==='Enter') sendMessage()">
+            <button onclick="sendMessage()" style="background:none; border:none; color:#40a7e3; cursor:pointer; font-size: 1.2rem;">
                 <i class="fas fa-paper-plane"></i>
             </button>
         </div>
     </div>
+
     <script>
-        // === КОНФИГУРАЦИЯ ===
-        const API_BASE = 'https://my-super-chat-2026.loca.lt';
+        const API_BASE = 'https://my-super-chat-2026.loca.lt/'; // Используем текущий адрес туннеля
         const WS_BASE = window.location.protocol === 'https:' ? 'wss://' + window.location.host : 'ws://' + window.location.host;
-        
+
         let accessToken = localStorage.getItem('access_token');
-        let currentUser = null; // ID текущего юзера
         let activeChatId = null;
         let socket = null;
 
-        // === ПРОВЕРКА АВТОРИЗАЦИИ ПРИ ЗАГРУЗКЕ ===
-        document.addEventListener('DOMContentLoaded', () => {
-            if (accessToken) {
-                document.getElementById('login-screen').style.display = 'none';
-                initApp();
-            }
+        // Универсальные заголовки для обхода заглушки Localtunnel
+        const getHeaders = () => ({
+            'Content-Type': 'application/json',
+            'Bypass-Tunnel-Reminder': 'true',
+            ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {})
         });
 
-        // === 1. ЛОГИКА АВТОРИЗАЦИИ ===
         async function login() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            const errorEl = document.getElementById('login-error');
 
             try {
                 const res = await fetch(`${API_BASE}/api/auth/login/`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        // ВОТ ЭТОТ ЗАГОЛОВОК РЕШАЕТ ПРОБЛЕМУ:
+                        'Bypass-Tunnel-Reminder': 'true' 
+                    },
+                    body: JSON.stringify({ username: user, password: pass })
                 });
 
+                // Теперь Localtunnel пропустит запрос к Django
+                const data = await res.json();
+                
                 if (res.ok) {
-                    const data = await res.json();
                     accessToken = data.access;
                     localStorage.setItem('access_token', accessToken);
                     document.getElementById('login-screen').style.display = 'none';
                     initApp();
                 } else {
-                    document.getElementById('login-error').style.display = 'block';
+                    errorEl.innerText = data.detail || "Ошибка входа";
+                    errorEl.style.display = 'block';
                 }
             } catch (e) {
-                console.error("Login error:", e);
-                alert("Ошибка сети");
+                console.error("Fetch error:", e);
+                errorEl.innerText = "Ошибка сети (проверь консоль)";
+                errorEl.style.display = 'block';
             }
         }
 
         function logout() {
-            localStorage.removeItem('access_token');
+            localStorage.clear();
             location.reload();
         }
 
-        // === ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ ===
-        async function initApp() {
-            // Получаем свой ID (можно сделать отдельный эндпоинт /me, здесь для примера декодируем токен или берем из логина)
-            // Для упрощения считаем, что сервер при логине вернул ID, или запрашиваем профиль.
-            // Пока просто грузим чаты.
+        function initApp() {
             loadChats();
             connectWebSocket();
         }
 
-        // === 2. СОЗДАНИЕ ГРУПП И КАНАЛОВ ===
-        async function createNewChat(type) {
-            let title = "";
-            
-            if (type === 'personal') {
-                const username = prompt("Введите username пользователя:");
-                if (!username) return;
-                // Логика поиска юзера и создания лички (упрощенно)
-                alert("Пока реализовано только создание групп/каналов через ID. Используйте админку для лички.");
-                return;
-            } else {
-                title = prompt(`Введите название ${type === 'channel' ? 'канала' : 'группы'}:`);
-            }
-
-            if (!title) return;
-
-            try {
-                const res = await fetch(`${API_BASE}/api/chats/`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        title: title,
-                        type: type // 'group' или 'channel'
-                    })
-                });
-
-                if (res.ok) {
-                    loadChats(); // Обновляем список
-                } else {
-                    alert("Ошибка создания. Проверьте консоль.");
-                }
-            } catch (e) {
-                console.error(e);
-            }
-        }
-
-        // === 3. ЗАГРУЗКА И ОТОБРАЖЕНИЕ СПИСКА ЧАТОВ ===
         async function loadChats() {
             try {
-                const res = await fetch(`${API_BASE}/api/chats/`, {
-                    headers: { 'Authorization': `Bearer ${accessToken}` }
-                });
+                const res = await fetch(`${API_BASE}/api/chats/`, { headers: getHeaders() });
                 const chats = await res.json();
-                renderChats(chats);
-            } catch (e) {
-                console.error("Ошибка загрузки чатов:", e);
-            }
+                const list = document.getElementById('chat-list');
+                list.innerHTML = '';
+                chats.forEach(chat => {
+                    const div = document.createElement('div');
+                    div.className = `chat-item ${chat.id === activeChatId ? 'active' : ''}`;
+                    div.innerHTML = `<strong>${chat.title || 'Чат ' + chat.id}</strong>`;
+                    div.onclick = () => openChat(chat);
+                    list.appendChild(div);
+                });
+            } catch (e) { console.error("Ошибка чатов:", e); }
         }
 
-        function renderChats(chats) {
-            const list = document.getElementById('chat-list');
-            list.innerHTML = '';
-            chats.forEach(chat => {
-                const item = document.createElement('div');
-                item.className = `chat-item ${chat.id === activeChatId ? 'active' : ''}`;
-                item.onclick = () => openChat(chat);
-                
-                // Иконка в зависимости от типа
-                let icon = 'fa-user';
-                if (chat.type === 'group') icon = 'fa-users';
-                if (chat.type === 'channel') icon = 'fa-bullhorn';
-
-                item.innerHTML = `
-                    <div class="avatar"><i class="fas ${icon}"></i></div>
-                    <div class="chat-info">
-                        <div class="chat-name">${chat.title || 'Чат ' + chat.id}</div>
-                        <div class="last-message">ID: ${chat.id}</div>
-                    </div>
-                `;
-                list.appendChild(item);
-            });
-        }
-
-        // === 4. ОТКРЫТИЕ ЧАТА И ЗАГРУЗКА ИСТОРИИ ===
         async function openChat(chat) {
             activeChatId = chat.id;
             document.getElementById('chat-title').innerText = chat.title || `Чат #${chat.id}`;
-            document.getElementById('messages-container').innerHTML = ''; // Очистка
-            loadChats(); // Чтобы обновить подсветку активного
+            document.getElementById('messages-container').innerHTML = '';
+            loadChats();
 
             try {
-                const res = await fetch(`${API_BASE}/api/chats/${chat.id}/messages/`, {
-                    headers: { 'Authorization': `Bearer ${accessToken}` }
-                });
+                const res = await fetch(`${API_BASE}/api/chats/${chat.id}/messages/`, { headers: getHeaders() });
                 const messages = await res.json();
-                messages.forEach(msg => appendMessage(msg));
+                messages.forEach(appendMessage);
                 scrollToBottom();
-            } catch (e) {
-                console.error("Ошибка истории:", e);
-            }
+            } catch (e) { console.error("Ошибка истории:", e); }
         }
 
-        // === 5. ОТПРАВКА ФОТО (Загрузка в Media Service) ===
         async function uploadFile() {
-            const fileInput = document.getElementById('file-input');
-            const file = fileInput.files[0];
+            const file = document.getElementById('file-input').files[0];
             if (!file) return;
 
             const formData = new FormData();
             formData.append('file', file);
 
-            // Показываем индикатор загрузки (можно добавить спиннер)
-            console.log("Загрузка файла...");
-
             try {
-                // Запрос к твоему Media Service
-                const res = await fetch(`${API_BASE}/api/media/upload/`, { // Убедись, что путь в Nginx совпадает
+                // Путь согласно Nginx: /media-api/
+                const res = await fetch(`${API_BASE}/media-api/upload`, {
                     method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`
-                    },
+                    headers: { 'Authorization': `Bearer ${accessToken}`, 'Bypass-Tunnel-Reminder': 'true' },
                     body: formData
                 });
 
                 if (res.ok) {
                     const data = await res.json();
-                    // data должна содержать { file_url: "...", thumbnail_url: "..." }
-                    // Отправляем сообщение с прикрепленным URL
-                    sendMessage(null, data.file_url); 
-                } else {
-                    alert("Ошибка загрузки файла");
+                    // Формируем URL для отображения
+                    const fileUrl = `${API_BASE}/media-api/media/${data.saved_as}`;
+                    sendMessage(null, fileUrl);
                 }
-            } catch (e) {
-                console.error(e);
-                alert("Ошибка соединения с Media Service");
-            } finally {
-                fileInput.value = ''; // Сброс инпута
-            }
+            } catch (e) { alert("Ошибка загрузки файла"); }
         }
 
-        // === 6. ОТПРАВКА СООБЩЕНИЯ (WEBSOCKET) ===
         function sendMessage(text = null, fileUrl = null) {
-            if (!socket || socket.readyState !== WebSocket.OPEN) {
-                alert("Нет соединения с сервером");
-                return;
-            }
-            
-            const textInput = document.getElementById('message-input');
-            const content = text || textInput.value;
+            if (!socket || socket.readyState !== WebSocket.OPEN) return;
+            const input = document.getElementById('message-input');
+            const msgText = text || input.value;
+            if (!msgText && !fileUrl) return;
 
-            if (!content && !fileUrl) return;
-
-            const payload = {
-                message: content,     // Текст сообщения
-                file_url: fileUrl,    // Ссылка на фото (если есть)
+            socket.send(JSON.stringify({
+                message: msgText,
+                file_url: fileUrl,
                 chat_id: activeChatId
-            };
-
-            socket.send(JSON.stringify(payload));
-            
-            if (!text) textInput.value = ''; // Очистить поле ввода, если это был текст
+            }));
+            input.value = '';
         }
 
-        function handleKeyPress(e) {
-            if (e.key === 'Enter') sendMessage();
-        }
-
-        // === 7. WEBSOCKET ПОДКЛЮЧЕНИЕ ===
         function connectWebSocket() {
-            // Передаем токен в URL для авторизации
-            const wsUrl = `${WS_BASE}/ws/?token=${accessToken}`;
-            socket = new WebSocket(wsUrl);
-
-            socket.onopen = () => {
-                console.log("WS Connected");
-                document.getElementById('chat-status').innerText = "Онлайн";
-                document.getElementById('chat-status').style.color = "#40a7e3";
-            };
-
-            socket.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                
-                // Проверяем, относится ли сообщение к текущему чату
+            socket = new WebSocket(`${WS_BASE}/ws/?token=${accessToken}`);
+            socket.onopen = () => document.getElementById('chat-status').innerText = "📡 Онлайн";
+            socket.onmessage = (e) => {
+                const data = JSON.parse(e.data);
                 if (data.chat_id == activeChatId) {
                     appendMessage(data);
                     scrollToBottom();
-                } else {
-                    // Можно сделать уведомление или обновить список чатов
-                    console.log("Сообщение в другом чате:", data);
                 }
             };
-
             socket.onclose = () => {
-                console.log("WS Disconnected");
-                document.getElementById('chat-status').innerText = "Оффлайн";
-                document.getElementById('chat-status').style.color = "red";
-                // Попытка реконнекта через 3 сек
+                document.getElementById('chat-status').innerText = "🔴 Оффлайн (реконнект...)";
                 setTimeout(connectWebSocket, 3000);
             };
         }
 
-        // === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
         function appendMessage(msg) {
             const container = document.getElementById('messages-container');
             const div = document.createElement('div');
-            
-            // Определяем, свое это сообщение или чужое (нужна логика ID, пока ставим received по дефолту)
-            // В реальности нужно сравнивать msg.sender_id === currentUser.id
-            div.className = `message received`; 
+            div.className = `message`; 
 
-            let content = '';
+            let html = '';
+            if (msg.file_url) html += `<a href="${msg.file_url}" target="_blank"><img src="${msg.file_url}"></a>`;
+            if (msg.text || msg.message) html += `<p>${msg.text || msg.message}</p>`;
             
-            // Если есть картинка
-            if (msg.file_url) {
-                content += `<a href="${msg.file_url}" target="_blank">
-                                <img src="${msg.file_url}" alt="image">
-                            </a>`;
-            }
-            
-            // Если есть текст
-            if (msg.text) {
-                content += `<p>${msg.text}</p>`;
-            }
-
-            content += `<div class="message-meta">${new Date(msg.created_at || Date.now()).toLocaleTimeString()}</div>`;
-            
-            div.innerHTML = content;
+            div.innerHTML = html;
             container.appendChild(div);
         }
 
         function scrollToBottom() {
-            const container = document.getElementById('messages-container');
-            container.scrollTop = container.scrollHeight;
+            const c = document.getElementById('messages-container');
+            c.scrollTop = c.scrollHeight;
         }
 
+        if (accessToken) initApp();
     </script>
 </body>
 </html>
