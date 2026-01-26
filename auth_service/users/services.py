@@ -9,4 +9,4 @@ def send_otp_to_user(user):
     user.save(update_fields=['otp_code', 'otp_created_at'])
     
     print(f"--- OTP SENT TO {user.username}: {otp} ---")
-    return otp
+    return otp  
