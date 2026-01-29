@@ -9,7 +9,7 @@ from users.views import CustomTokenObtainPairView, VerifyOTPView, RegisterView, 
 
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('admin/auth/', admin.site.urls),
     
     path('api/auth/register/', RegisterView.as_view(), name='auth_register'),
     path('api/auth/users/', UserSearchView.as_view(), name='user_search'),

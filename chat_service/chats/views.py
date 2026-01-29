@@ -1,8 +1,11 @@
 from django.conf import settings
+from django.db import transaction
+from asgiref.sync import async_to_sync
 from rest_framework import viewsets, status
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from channels.layers import get_channel_layer
 from .models import Message, Chat, ChatMember, User
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from .serializers import MessageSerializer, ChatListSerializer
 from .services import get_or_create_direct_chat, repost_to_discussion
 import requests
@@ -13,18 +16,15 @@ class MessageViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]
 
     def get_queryset(self):
-        """
-        Фильтруем сообщения по чату. 
-        Если ID чата не передан, возвращаем пустой список, чтобы не грузить лишнее.
-        """
-        chat_id = self.request.query_params.get('chat')
-        if not chat_id:
+        chat_id = self.request.query_params.get('chat')     
+        if not chat_id or not str(chat_id).isdigit():
             return Message.objects.none()
             
         return Message.objects.filter(chat_id=chat_id)\
                              .select_related('sender')\
                              .order_by('created_at')
-
+                             
+                             
     def create(self, request, *args, **kwargs):
         chat_id = request.data.get('chat')
         receiver_id = request.data.get('receiver_id')
@@ -80,6 +80,21 @@ class MessageViewSet(viewsets.ModelViewSet):
             file=saved_file_name,
             file_type='image' if file_obj else None
         )
+        
+        file_url = f"/api/media/{saved_file_name}" if saved_file_name else None
+        
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f"chat_{chat.id}",
+            {
+                "type": "chat_message",
+                "message": message.text,
+                "sender_username": user.username,
+                "sender_id": user.id,
+                "message_id": message.id,
+                "file": file_url, # ТЕПЕРЬ КАРТИНКА ПРИЛЕТИТ СРАЗУ
+            }
+        )
 
         if chat.type == Chat.CHANNEL and chat.discussion_group:
             repost_to_discussion(message, chat.discussion_group)
@@ -87,26 +102,34 @@ class MessageViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     
 
-class ChatViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    Вьюсет для просмотра списка чатов пользователя (Inbox).
-    """
-    serializer_class = ChatListSerializer 	
+class ChatViewSet(viewsets.ModelViewSet):
+    serializer_class = ChatListSerializer   
     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):     
-        chat_id = self.request.query_params.get('chat')
-        user = self.request.user
-        
-        if not chat_id:
-            return Message.objects.none()
-        
-        is_member = ChatMember.objects.filter(chat_id=chat_id, user=user).exists()
-        is_creator = Chat.objects.filter(id=chat_id, creator=user).exists()
-        
-        if not is_member and not is_creator:
-            return Message.objects.none()
-        
+    def get_queryset(self):
         return Chat.objects.filter(members__user=self.request.user)\
-            .prefetch_related('members__user', 'messages')\
+            .select_related('last_message_link')\
+            .prefetch_related('members__user')\
             .order_by('-created_at')
+
+    def create(self, request, *args, **kwargs):
+        chat_type = request.data.get('type', Chat.GROUP)
+        title = request.data.get('title', 'Новый чат')
+        user = request.user
+
+        with transaction.atomic():
+            # 1. Создаем сам чат
+            chat = Chat.objects.create(
+                type=chat_type,
+                title=title,
+                creator=user
+            )
+            # 2. Добавляем создателя как Админа
+            ChatMember.objects.create(
+                chat=chat,
+                user=user,
+                role=ChatMember.ADMIN
+            )
+        
+        serializer = self.get_serializer(chat)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

@@ -6,11 +6,6 @@ services:
     container_name: auth_db
     env_file:
       - ./auth_service/.env
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U auth_user -d auth_db_name"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
     restart: always
     ports:
       - "5432:5432"
@@ -22,28 +17,21 @@ services:
     container_name: chat_db
     env_file:
       - ./chat_service/.env
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U chat_user -d chat_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+    restart: always
     volumes:
       - chat_data:/var/lib/postgresql/data
 
   redis:
     image: redis:7
     container_name: auth_redis
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+    restart: always
     ports:
       - "6379:6379"
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     container_name: kafka
+    restart: always
     ports:
       - "9092:9092"
     environment:
@@ -60,95 +48,91 @@ services:
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
-      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk' 
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
 
   auth_service:
     build: ./auth_service
     container_name: django_auth
+    restart: always
     command: >
       sh -c "python manage.py migrate &&
              python manage.py runserver 0.0.0.0:8000"
     volumes:
       - ./auth_service:/app
+      - static_content:/app/staticfiles
     ports:
       - "8000:8000"
     env_file:
       - ./auth_service/.env
     depends_on:
-      db:
-        condition: service_healthy
-      kafka:
-        condition: service_started
-      redis:
-        condition: service_healthy
+      - db
+      - kafka
+      - redis
 
   auth_worker:
     build: ./auth_service
     container_name: auth_celery_worker
+    restart: always
     command: celery -A core worker -l info --pool=solo
     volumes:
       - ./auth_service:/app
     env_file:
       - ./auth_service/.env
     depends_on:
-      redis:
-        condition: service_healthy
-      db:
-        condition: service_healthy
-      kafka:
-        condition: service_started
+      - redis
+      - db
+      - kafka
 
   chat_service:
     build: ./chat_service
     container_name: django_chat
+    restart: always
     command: >
       sh -c "python manage.py migrate &&
              daphne -b 0.0.0.0 -p 8001 core.asgi:application"
     volumes:
       - ./chat_service:/app
+      - static_content:/app/staticfiles
+      - media_content:/app/media
     ports:
       - "8001:8001"
     env_file:
       - ./chat_service/.env 
     depends_on:
-      chat_db:
-        condition: service_healthy
-      kafka:
-        condition: service_started
-      redis:
-        condition: service_healthy
+      - chat_db
+      - kafka
+      - redis
 
   chat_notifications_consumer:
     build: ./chat_service
     container_name: kafka_consumer_worker
     command: sh -c "sleep 15 && python -u manage.py run_kafka_consumer"
-    restart: on-failure
+    restart: always
     volumes:
       - ./chat_service:/app
     env_file:
       - ./chat_service/.env
     depends_on:
-      kafka:
-        condition: service_started
-      redis:
-        condition: service_healthy
+      - kafka
+      - redis
 
   chat_messages_notifications:
     build: ./chat_service
     container_name: chat_notifications_worker
+    restart: always
     command: sh -c "sleep 15 && python manage.py run_notifications_consumer"
     volumes:
       - ./chat_service:/app
     env_file:
       - ./chat_service/.env
     depends_on:
-      kafka:
-        condition: service_started
-      redis:
-        condition: service_healthy
+      - kafka
+      - redis
+
   minio:
     image: minio/minio
     container_name: media_storage
+    restart: always
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -158,10 +142,14 @@ services:
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
+
   media_service:
     build: ./media_service
     container_name: fastapi_media
+    restart: always
     command: sh -c "sleep 15 && uvicorn main:app --host 0.0.0.0 --port 8002"
+    environment:
+      - MINIO_ENDPOINT=minio:9000
     ports:
       - "8002:8002"
     env_file:
@@ -170,34 +158,40 @@ services:
       - minio
     volumes:
       - ./media_service:/app
+
   media_processor_go:
     build: ./media_processor_go
+    command: sh -c "sleep 30 && ./worker"
     container_name: go_thumbnailer
+    restart: always
     environment:
       - MINIO_ENDPOINT=minio:9000
       - MINIO_ACCESS_KEY=media_admin
       - MINIO_SECRET_KEY=media_password
+      - KAFKA_BROKERS=kafka:9092
     depends_on:
       - kafka
       - minio
-    # volumes:
-    #   - ./media_processor_go:/app
+
   nginx:
     image: nginx:latest
     container_name: nginx_proxy
+    restart: always
     ports:
       - "80:80"
     volumes:
-    - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
-    - ./nginx/proxy_params:/etc/nginx/proxy_params
-    - ./chat_service/staticfiles:/app/staticfiles
-    - ./nginx/index.html:/usr/share/nginx/html/index.html
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./nginx/proxy_params:/etc/nginx/proxy_params
+      - ./nginx/index.html:/usr/share/nginx/html/index.html
+      - static_content:/app/staticfiles
+      - media_content:/app/media
     depends_on:
+      - auth_service
       - chat_service
-      - media_service
-    restart: always
 
 volumes:
   postgres_data:
   chat_data:
   minio_data:
+  static_content:
+  media_content:

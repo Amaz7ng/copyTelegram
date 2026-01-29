@@ -1,52 +1,58 @@
-from pathlib import Path
 import os
+from pathlib import Path
 import environ
 
+# Инициализация переменных окружения
 env = environ.Env(
-    DEBUG=(bool, False)
+    DEBUG=(bool, False),
+    SECRET_KEY=(str, 'django-insecure-default-key-chat')
 )
 
+# Определение путей
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-    
+# Чтение .env файла
 env_file = os.path.join(BASE_DIR, '.env')
 if not os.path.exists(env_file):
     env_file = os.path.join(BASE_DIR.parent, '.env')
-environ.Env.read_env(env_file)
 
+if os.path.exists(env_file):
+    environ.Env.read_env(env_file)
+
+# --- ОСНОВНЫЕ НАСТРОЙКИ ---
 SECRET_KEY = env('SECRET_KEY')
 DEBUG = env('DEBUG')
-# ALLOWED_HOSTS = ['*']
 
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication', 
-        'rest_framework.authentication.SessionAuthentication',   
-    ]
-}
+# Разрешаем все хосты (фильтрацию берет на себя Nginx и фаервол)
+ALLOWED_HOSTS = ['*']
 
+# --- ПРИЛОЖЕНИЯ ---
 INSTALLED_APPS = [
+    'daphne', # ВАЖНО: Должно быть первым для работы WebSocket/ASGI
+    
     'corsheaders',
-    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    
     'rest_framework',
-    'chats',
-    'channels',
+    'channels', # Для WebSocket
+    
+    'chats', # Твое приложение
 ]
 
+# --- MIDDLEWARE ---
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
+    'corsheaders.middleware.CorsMiddleware', # В самом верху для обработки заголовков
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  
-    'django.contrib.sessions.middleware.SessionMiddleware',  
+    'whitenoise.middleware.WhiteNoiseMiddleware', # Для статики
+    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',  
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -68,72 +74,98 @@ TEMPLATES = [
     },
 ]
 
+# --- СЕРВЕРНЫЕ НАСТРОЙКИ (WSGI / ASGI) ---
 WSGI_APPLICATION = 'core.wsgi.application'
+ASGI_APPLICATION = 'core.asgi.application'
 
+# --- БАЗА ДАННЫХ ---
 DATABASES = {
-    'default': env.db(), 
+    'default': env.db(), # Читает DATABASE_URL из .env
 }
 
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
-]
-
+# --- CHANNELS (WebSocket) ---
+# Используем Redis как брокер сообщений для чатов
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
+            # Используем базу 1, чтобы не мешать Celery (обычно база 0)
             "hosts": [env('REDIS_URL', default='redis://redis:6379/1')],
         },
     },
 }
 
+# --- REST FRAMEWORK ---
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication', 
+        # SessionAuth можно оставить для админки, но для API лучше только JWT
+        'rest_framework.authentication.SessionAuthentication',   
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ]
+}
+
+# --- ВАЛИДАЦИЯ ПАРОЛЕЙ ---
+AUTH_PASSWORD_VALIDATORS = [
+    { 'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator', },
+    { 'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', },
+    { 'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator', },
+    { 'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator', },
+]
+
+# --- ЛОКАЛИЗАЦИЯ ---
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'UTC'
-
 USE_I18N = True
-
 USE_TZ = True
 
-import os
+# --- СТАТИКА И МЕДИА ---
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-STATIC_URL = 'static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles') 
+# Настройка WhiteNoise для эффективной раздачи статики в Docker
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
-KAFKA_BOOTSTRAP_SERVERS = env('KAFKA_BOOTSTRAP_SERVERS', default='kafka:9093')
-
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-AUTH_USER_MODEL = 'chats.User'
-ASGI_APPLICATION = 'core.asgi.application'
-
-MEDIA_SERVICE_URL = env('MEDIA_SERVICE_URL', default='http://fastapi_media:8002/upload')
-
-CORS_ALLOW_ALL_ORIGINS = True
-
-CORS_ALLOW_CREDENTIALS = True
-
-
+# Медиа настройки
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+if not os.path.exists(MEDIA_ROOT):
+    os.makedirs(MEDIA_ROOT, exist_ok=True)
 
+# URL для доступа к микросервису медиа (через Nginx)
+MEDIA_SERVICE_URL = "/api/media/"
 
-# Разрешаем Django принимать запросы с этого домена
-ALLOWED_HOSTS = ['my-super-chat-2026.loca.lt', 'localhost', '127.0.0.1', 'django_auth', 'django_chat']
+# --- KAFKA ---
+KAFKA_BOOTSTRAP_SERVERS = env('KAFKA_BOOTSTRAP_SERVERS', default='kafka:9092')
 
-# КРИТИЧЕСКИ ВАЖНО для работы через туннель:
-CSRF_TRUSTED_ORIGINS = ["https://*.loca.lt", "http://localhost"]
+# --- ПОЛЬЗОВАТЕЛЬ ---
+AUTH_USER_MODEL = 'chats.User'
 
-# Чтобы Django понимал, что запрос пришел через HTTPS (туннель это делает)
+# --- БЕЗОПАСНОСТЬ И ПРОКСИ (Ключевое для Localtunnel) ---
+
+# CORS
+CORS_ALLOW_ALL_ORIGINS = True # Разрешаем всем (удобно для разработки)
+CORS_ALLOW_CREDENTIALS = True
+
+# CSRF
+CSRF_TRUSTED_ORIGINS = [
+    "https://*.loca.lt", 
+    "http://localhost", 
+    "http://127.0.0.1",
+]
+
+# HTTPS Proxy Headers
+# Это говорит Django, что если заголовок X-Forwarded-Proto = https, то соединение защищено.
+# Nginx передает этот заголовок.
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
+
+# --- ДОПОЛНИТЕЛЬНО ---
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

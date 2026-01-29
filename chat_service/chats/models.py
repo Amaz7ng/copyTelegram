@@ -120,4 +120,9 @@ class Message(models.Model):
             chat.save(update_fields=['last_message_link'])
 
     def __str__(self):
-        return f"{self.sender.username}: {self.text[:20]}"
+        if self.text:
+            return f"{self.sender.username}: {self.text[:20]}"
+        elif self.file:
+            return f"{self.sender.username}: [Файл: {self.file_type}]"
+        else:
+            return f"{self.sender.username}: (пустое сообщение)"

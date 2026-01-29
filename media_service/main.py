@@ -13,20 +13,18 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 load_dotenv()
 
 raw_endpoint = os.getenv('MINIO_ENDPOINT', 'minio:9000')
-clean_endpoint = re.sub(r'[^a-zA-Z0-9\.\:/]', '', raw_endpoint)
-if not clean_endpoint.startswith('http'):
-    final_endpoint = f"http://{clean_endpoint}"
+if not raw_endpoint.startswith('http'):
+    final_endpoint = f"http://{raw_endpoint}"
 else:
-    final_endpoint = clean_endpoint
+    final_endpoint = raw_endpoint
 
-print(f"DEBUG: Настройка S3 клиента на: {final_endpoint}")
-
+print(f"DEBUG: Connecting to MinIO at: {final_endpoint}")
 
 s3 = boto3.client(
     's3',
     endpoint_url=final_endpoint,
-    aws_access_key_id=os.getenv('MINIO_ACCESS_KEY'),
-    aws_secret_access_key=os.getenv('MINIO_SECRET_KEY'),
+    aws_access_key_id=os.getenv('MINIO_ACCESS_KEY', 'media_admin'),
+    aws_secret_access_key=os.getenv('MINIO_SECRET_KEY', 'media_password'),
     region_name='us-east-1',
     config=Config(
         signature_version='s3v4',
