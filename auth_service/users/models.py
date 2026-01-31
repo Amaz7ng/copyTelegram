@@ -1,17 +1,12 @@
-import asyncio
-import uuid
 import random
 import logging
-
+import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.db.models.signals import post_save
-from django.dispatch import receiver
+from django.dispatch import receiver  # Убедись, что путь верный
 
-from typing import Any, Dict, Type
-
-logger = logging.getLogger('users') 
-
+logger = logging.getLogger('users')
 
 class User(AbstractUser):
     email = models.EmailField(unique=True)
@@ -28,18 +23,15 @@ class User(AbstractUser):
         max_length=32, 
         unique=True, 
         db_index=True, 
+        blank=True, # Добавил blank=True, чтобы админка не ругалась при пустом поле
         verbose_name="Тэг (username как в TG)",
         help_text="Если оставить пустым, сгенерируется автоматически"
     )
     
     def save(self, *args, **kwargs):
         if not self.search_handle:
-            random_suffix = ''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=6))
-            self.search_handle = f"user_{random_suffix}"
-            
-            while User.objects.filter(search_handle=self.search_handle).exists():
-                random_suffix = ''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=6))
-                self.search_handle = f"user_{random_suffix}"
+            # Простая генерация, проверку на уникальность лучше оставить на уровень БД или делать аккуратнее
+            self.search_handle = f"user_{uuid.uuid4().hex[:6]}"
         
         self.search_handle = self.search_handle.lower()
         super().save(*args, **kwargs)

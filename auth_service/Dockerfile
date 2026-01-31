@@ -12,7 +12,13 @@ RUN apt-get update && apt-get install -y \
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+# Ставим gunicorn для продакшн-режима
+RUN pip install gunicorn 
 
 COPY . .
 
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Собираем статику сразу при сборке образа
+RUN python manage.py collectstatic --noinput
+
+# Используем 8000 порт для Auth
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "core.wsgi:application"]

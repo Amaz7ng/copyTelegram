@@ -3,6 +3,7 @@ import logging
 import socket
 import sys
 from confluent_kafka import Producer
+from django.conf import settings  # Импортируем настройки Django
 
 logger = logging.getLogger('users')
 
@@ -15,7 +16,7 @@ def delivery_report(err, msg):
         logger.info(f"[Kafka] Доставлено в топик {msg.topic()}")
 
 def get_kafka_producer():
-    """Ленивая инициализация продюсера: создается только при реальном вызове"""
+    """Ленивая инициализация продюсера с использованием Django Settings"""
     global _producer
     
     if 'pytest' in sys.modules or 'test' in sys.argv:
@@ -23,14 +24,18 @@ def get_kafka_producer():
 
     if _producer is None:
         try:
+            # Берем список серверов из настроек, которые мы прописали в settings.py
+            bootstrap_servers = getattr(settings, 'KAFKA_BOOTSTRAP_SERVERS', 'kafka:9092')
+            
             conf = {
-                'bootstrap.servers': 'kafka:9092',
+                'bootstrap.servers': bootstrap_servers,
                 'client.id': socket.gethostname(),
                 'api.version.request': True,
                 'broker.address.family': 'v4',
                 'socket.timeout.ms': 2000,
             }
             _producer = Producer(conf)
+            logger.info(f"[Kafka] Продюсер инициализирован на {bootstrap_servers}")
         except Exception as e:
             logger.error(f"[Kafka] Не удалось инициализировать продюсер: {e}")
             return None
@@ -42,15 +47,22 @@ def publish_user_created_sync(user_data):
     p = get_kafka_producer()
     
     if p is None:
+        logger.error("[Kafka] Отправка невозможна: продюсер не создан")
         return
 
     try:
+        # Убедимся, что тип сообщения на месте
+        if 'type' not in user_data:
+            user_data['type'] = 'user_created'
+
         p.produce(
             'user_created',
-            key=str(user_data['id']),
+            key=str(user_data.get('id')),
             value=json.dumps(user_data).encode('utf-8'),
             callback=delivery_report
         )
+        # Ждем завершения отправки (1 секунда)
         p.flush(1)
     except Exception as e:
         logger.error(f"[Kafka] Ошибка при отправке сообщения: {e}")
+        raise e  # ОБЯЗАТЕЛЬНО: чтобы Celery поймал ошибку и ушел в retry

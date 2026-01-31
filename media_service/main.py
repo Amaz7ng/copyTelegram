@@ -118,23 +118,21 @@ async def delete_file(file_name: str):
         print(f"DELETE ERROR: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Ошибка при удалении: {str(e)}")
     
-@app.get("/media/{file_name}")
-async def get_file(file_name: str):
+@app.get("/thumbnails/{file_name}")
+async def get_thumbnail(file_name: str):
     try:
-        # Пытаемся забрать файл из бакета
         loop = asyncio.get_event_loop()
         response = await loop.run_in_executor(
             None,
-            lambda: s3.get_object(Bucket=BUCKET_NAME, Key=file_name)
+            lambda: s3.get_object(Bucket="thumbnails", Key=file_name) # <--- ТУТ БЫЛ BUCKET_NAME
         )
-        # Отдаем поток байтов напрямую в браузер
         return StreamingResponse(
             response['Body'], 
             media_type=response.get('ContentType', 'image/jpeg')
         )
     except Exception as e:
-        print(f"GET ERROR: {str(e)}")
-        raise HTTPException(status_code=404, detail="Файл не найден в хранилище")
+        print(f"GET THUMB ERROR: {str(e)}")
+        raise HTTPException(status_code=404, detail="Миниатюра не найдена")
 
 @app.get("/health")
 def health_check():

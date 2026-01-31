@@ -90,7 +90,7 @@
     </div>
 
     <script>
-        const RAW_HOST = 'wild-boats-stay.loca.lt'; 
+        const RAW_HOST = 'famous-signs-occur.loca.lt'; 
         const API_BASE = `https://${RAW_HOST}`;
 
         let accessToken = null;
@@ -100,29 +100,67 @@
 
         // --- AUTH LOGIC ---
         async function handleAuth(type) {
-            const user = document.getElementById('username').value;
-            const pass = document.getElementById('password').value;
-            
+            const userField = document.getElementById('username');
+            const passField = document.getElementById('password');
+            const user = userField.value.trim();
+            const pass = passField.value.trim();
+
+            if (!user || !pass) {
+                alert("Пожалуйста, заполните логин и пароль");
+                return;
+            }
+
             const endpoint = type === 'login' ? '/api/auth/login/' : '/api/auth/register/';
+            
+            const payload = { 
+                username: user, 
+                password: pass 
+            };
+
+            if (type === 'register') {
+                payload.email = `${user}@example.com`; 
+            }
+
             try {
                 const res = await fetch(`${API_BASE}${endpoint}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: user, password: pass })
+                    body: JSON.stringify(payload)
                 });
+
+                if (!res.ok) {
+                    const errorData = await res.json();
+                    handleApiErrors(errorData);
+                    return;
+                }
+
                 const data = await res.json();
 
-                if (data.message === "OTP_SENT") {
-                    document.getElementById('otp-area').style.display = 'block';
-                    alert("Введите код из консоли Django (имитация SMS/Email)");
-                } else if (data.access) {
+                if (data.access) {
                     saveAuth(data);
+                } else if (data.message === "OTP_SENT") {
+                    document.getElementById('otp-area').style.display = 'block';
+                    alert("Код подтверждения отправлен!");
                 } else if (type === 'register') {
-                    alert("Регистрация успешна! Теперь войдите.");
-                } else {
-                    alert("Ошибка: " + JSON.stringify(data));
+                    alert("Регистрация успешна! Теперь вы можете войти.");
                 }
-            } catch (e) { console.error(e); }
+
+            } catch (e) {
+                console.error("Auth Error:", e);
+                alert("Критическая ошибка: " + e.message);
+            }
+        }
+
+        function handleApiErrors(data) {
+            let errorMsg = "";
+            if (data.detail) {
+                errorMsg = data.detail;
+            } else {
+                for (let key in data) {
+                    errorMsg += `${key}: ${data[key].join(', ')}\n`;
+                }
+            }
+            alert("Ошибка:\n" + (errorMsg || "Неизвестная ошибка сервера"));
         }
 
         async function verifyOtp() {
@@ -149,21 +187,15 @@
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${accessToken}`
                     },
-                    body: JSON.stringify({ 
-                        type: type, 
-                        title: title 
-                    })
+                    body: JSON.stringify({ type: type, title: title })
                 });
 
                 if (res.ok) {
-                    loadChats(); // Обновляем список после создания
+                    loadChats();
                 } else {
-                    const err = await res.json();
-                    alert("Ошибка создания: " + JSON.stringify(err));
+                    alert("Ошибка создания");
                 }
-            } catch (e) {
-                console.error("Ошибка:", e);
-            }
+            } catch (e) { console.error(e); }
         }
 
         function saveAuth(data) {
@@ -175,30 +207,36 @@
             initApp();
         }
 
-// --- INITIALIZATION ---
         function initApp() {
             loadChats();
-            setupGlobalSocket(); // Для уведомлений (баджей)
         }
 
         // --- CHAT & USERS ---
         async function searchUsers(query) {
-            if (query.length < 2) return;
-            // Поиск по search_handle (из твоей модели User)
-            const res = await fetch(`${API_BASE}/api/auth/users/?search=${query}`, {
-                headers: { 'Authorization': `Bearer ${accessToken}` }
-            });
-            const users = await res.json();
             const container = document.getElementById('search-results');
-            container.innerHTML = users.map(u => `
-                <div class="chat-item" onclick="startDirectChat(${u.id}, '${u.username}')">
-                    ${u.username} (@${u.search_handle})
-                </div>
-            `).join('');
+            if (query.length < 2) {
+                container.innerHTML = '';
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/api/auth/users/?search=${query}`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                
+                if (!res.ok) return;
+                
+                const users = await res.json();
+                container.innerHTML = users.map(u => `
+                    <div class="chat-item" style="border: 1px solid var(--border); background: var(--panel);" 
+                        onclick="startDirectChat(${u.id}, '${u.username}')">
+                        ${u.username}
+                    </div>
+                `).join('');
+            } catch (e) { console.error(e); }
         }
 
         async function startDirectChat(userId, username) {
-            // Создаем или получаем личный чат через твой MessageViewSet
             const res = await fetch(`${API_BASE}/api/messages/`, {
                 method: 'POST',
                 headers: { 
@@ -210,6 +248,7 @@
             const data = await res.json();
             document.getElementById('search-results').innerHTML = '';
             loadChats();
+            // В ответе приходит chat (id), используем его
             connectToChat(data.chat, username);
         }
 
@@ -220,7 +259,7 @@
             const chats = await res.json();
             const list = document.getElementById('chat-list');
             list.innerHTML = chats.map(c => `
-                <div class="chat-item" onclick="connectToChat(${c.id}, '${c.title || c.interlocutor?.username}')">
+                <div class="chat-item" onclick="connectToChat(${c.id}, '${c.title || c.interlocutor?.username || 'Чат'}')">
                     ${c.title || c.interlocutor?.username || 'Чат ' + c.id}
                     <span id="badge-${c.id}" class="unread-badge ${c.unread_count ? '' : 'hidden'}">${c.unread_count || 0}</span>
                 </div>
@@ -231,22 +270,32 @@
         function connectToChat(chatId, title) {
             currentChatId = chatId;
             document.getElementById('current-chat-title').innerText = title;
-            document.getElementById('messages').innerHTML = 'Загрузка истории...';
-
-            if (mainWs) mainWs.close();
-
-            // Правильное формирование URL для WebSocket
-            const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
             
-            // ВНИМАНИЕ: Здесь используем RAW_HOST без https://
-            mainWs = new WebSocket(`${wsScheme}://${RAW_HOST}/ws/chat/${chatId}/?token=${accessToken}`);
+            const messagesContainer = document.getElementById('messages');
+            messagesContainer.innerHTML = '<div style="text-align:center; opacity:0.5;">Загрузка истории...</div>';
 
-            mainWs.onmessage = (e) => {
-                const data = JSON.parse(e.data);
-                handleIncomingEvent(data);
-            };
+            if (mainWs) {
+                mainWs.close();
+            }
 
-            loadMessages(chatId);
+            const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+            const cleanHost = RAW_HOST.replace(/\/$/, ""); 
+            
+            try {
+                // Подключаемся к нужному Chat ID
+                mainWs = new WebSocket(`${wsScheme}://${cleanHost}/ws/chat/${chatId}/?token=${accessToken}`);
+
+                mainWs.onmessage = (e) => {
+                    const data = JSON.parse(e.data);
+                    handleIncomingEvent(data);
+                };
+
+                mainWs.onerror = (e) => console.error("WebSocket Error:", e);
+                
+                loadMessages(chatId);
+            } catch (err) {
+                console.error("WS Connection failed:", err);
+            }
         }
 
         async function loadMessages(chatId) {
@@ -260,7 +309,6 @@
             container.scrollTop = container.scrollHeight;
         }
 
-        // --- MESSAGE SENDING (FETCH + MEDIA) ---
         async function sendMessage() {
             const input = document.getElementById('msg-input');
             const fileInput = document.getElementById('file-input');
@@ -275,7 +323,6 @@
             if (file) formData.append('file', file);
 
             try {
-                // Отправляем через API (как в твоем views.py MessageViewSet.create)
                 const res = await fetch(`${API_BASE}/api/messages/`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${accessToken}` },
@@ -286,58 +333,100 @@
                     input.value = '';
                     fileInput.value = '';
                     updateFileLabel();
+                    // Сообщение придет через WebSocket, не рендерим его вручную, чтобы не было дублей
                 }
             } catch (e) { alert("Ошибка отправки"); }
         }
 
+        // --- FIXED IMAGE & DATA HANDLING ---
         function renderMessage(data) {
             const container = document.getElementById('messages');
+            if (!container) return;
+
+            // Проверка на дубликаты
+            if (document.getElementById(`msg-${data.id}`)) return;
+
             const isMe = data.sender_username === currentUser;
             const msgDiv = document.createElement('div');
+            msgDiv.id = `msg-${data.id}`; // Добавляем ID элементу
             msgDiv.className = `msg ${isMe ? 'me' : ''}`;
             
-            let content = `<b>${data.sender_username || 'Система'}:</b><br>${data.text || ''}`;
-            
-            if (data.file) {
-                const fileUrl = data.file.startsWith('http') 
-                    ? data.file 
-                    : `${API_BASE}/api/media/${data.file}`;
-                
-                const isImage = data.file.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+            let textContent = data.text ? data.text.replace(/</g, "&lt;").replace(/>/g, "&gt;") : "";
 
+            let content = `
+                <div style="font-size: 0.75em; color: #8b949e; margin-bottom: 4px;">
+                    ${data.sender_username || 'User'}
+                </div>
+                <div>${textContent}</div>
+            `;
+
+            if (data.file) {
+                // --- ИСПРАВЛЕНИЕ ПУТЕЙ ---
+                // Бэкенд теперь возвращает путь вида "/api/media/file.png"
+                // Если путь не начинается с http, добавляем домен
+                let fileUrl = data.file;
+                if (!fileUrl.startsWith('http')) {
+                    // API_BASE уже содержит https://host, а data.file начинается с /api
+                    // Результат: https://host/api/media/file.png
+                    fileUrl = API_BASE + fileUrl;
+                }
+                
+                // Для превью: вырезаем имя файла из пути
+                // "/api/media/uuid.png" -> split -> ["", "api", "media", "uuid.png"] -> pop -> "uuid.png"
+                const fileName = data.file.split('/').pop();
+                
+                // Формируем путь к тамбнейлу. Thumb service ждет просто имя файла
+                const thumbUrl = `${API_BASE}/api/thumbnails/thumb_${fileName}`;
+
+                const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(fileName);
+                
                 if (isImage) {
                     content += `
                         <div style="margin-top: 8px;">
-                            <img src="${fileUrl}" 
-                                style="max-width: 100%; border-radius: 8px;" 
-                                onerror="this.style.display='none';">
+                            <a href="${fileUrl}" target="_blank">
+                                <img src="${thumbUrl}" 
+                                    style="max-width: 200px; border-radius: 8px; border: 1px solid var(--border);"
+                                    onerror="this.onerror=null; this.src='${fileUrl}';"> </a>
                         </div>`;
                 } else {
-                    content += `<br><a href="${fileUrl}" target="_blank">📎 Файл</a>`;
+                    content += `
+                        <div style="margin-top: 8px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 4px;">
+                            <a href="${fileUrl}" target="_blank" style="color: var(--accent);">
+                                📎 Скачать файл
+                            </a>
+                        </div>`;
                 }
             }
-                        msgDiv.innerHTML = content;
+
+            msgDiv.innerHTML = content;
             container.appendChild(msgDiv);
             container.scrollTop = container.scrollHeight;
         }
 
+        // --- FIXED WS HANDLER ---
         function handleIncomingEvent(data) {
+            console.log("WS Event:", data);
+
             if (data.type === 'chat_message') {
-                renderMessage(data);
-            } else if (data.type === 'unread_badge') {
-                document.getElementById('global-unread').innerText = `Уведомления: ${data.unread_count}`;
+                // ВАЖНО: Данные сообщения лежат внутри ключа 'message'
+                const msgData = data.message;
+                
+                // ВАЖНО: Сравниваем ID чата (msgData.chat) с текущим (currentChatId)
+                if (String(msgData.chat) === String(currentChatId)) {
+                    renderMessage(msgData);
+                }
+            } else if (data.type === 'unread_badge_update') {
+                const chatBadge = document.getElementById(`badge-${data.chat_id}`);
+                if (chatBadge) {
+                    chatBadge.innerText = data.unread_count || '0';
+                    chatBadge.style.display = data.unread_count > 0 ? 'inline-block' : 'none';
+                }
             }
-            // Здесь можно добавить 'edit_message' и 'delete_message'
         }
 
         function updateFileLabel() {
             const file = document.getElementById('file-input').files[0];
-            document.getElementById('file-preview').innerText = file ? `Выбран файл: ${file.name}` : '';
-        }
-
-        function setupGlobalSocket() {
-            // Отдельный сокет для уведомлений, если нужно (из твоего routing.py)
-            // const notifyWs = new WebSocket(`ws://${BASE_URL}/ws/notifications/?token=${accessToken}`);
+            document.getElementById('file-preview').innerText = file ? `Выбран: ${file.name}` : '';
         }
     </script>
 </body>

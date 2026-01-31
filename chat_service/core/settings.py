@@ -40,8 +40,8 @@ INSTALLED_APPS = [
     
     'rest_framework',
     'channels', # Для WebSocket
-    
     'chats', # Твое приложение
+    
 ]
 
 # --- MIDDLEWARE ---
@@ -138,6 +138,8 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 if not os.path.exists(MEDIA_ROOT):
     os.makedirs(MEDIA_ROOT, exist_ok=True)
 
+
+MEDIA_SERVICE_INTERNAL_URL = "http://fastapi_media:8002/upload"
 # URL для доступа к микросервису медиа (через Nginx)
 MEDIA_SERVICE_URL = "/api/media/"
 
@@ -153,19 +155,24 @@ AUTH_USER_MODEL = 'chats.User'
 CORS_ALLOW_ALL_ORIGINS = True # Разрешаем всем (удобно для разработки)
 CORS_ALLOW_CREDENTIALS = True
 
-# CSRF
-CSRF_TRUSTED_ORIGINS = [
-    "https://*.loca.lt", 
-    "http://localhost", 
-    "http://127.0.0.1",
-]
 
-# HTTPS Proxy Headers
-# Это говорит Django, что если заголовок X-Forwarded-Proto = https, то соединение защищено.
-# Nginx передает этот заголовок.
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-USE_X_FORWARDED_HOST = True
-USE_X_FORWARDED_PORT = True
 
 # --- ДОПОЛНИТЕЛЬНО ---
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'SIGNING_KEY': SECRET_KEY, # Используем тот же ключ, что и в Auth Service
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'ALGORITHM': 'HS256',      # Должен совпадать с Auth Service
+}
+
+FORCE_SCRIPT_NAME = None
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://*.loca.lt",
+]
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True

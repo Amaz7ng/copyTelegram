@@ -1,19 +1,28 @@
-FROM golang:1.24-alpine
+# Этап сборки
+FROM golang:1.23-alpine AS builder
 
-RUN apk add --no-cache git 
+RUN apk add --no-cache git
 
 WORKDIR /app
 
-ENV GOPROXY=https://proxy.golang.org,direct
+# Копируем mod
+COPY go.mod ./
 
-COPY *.go ./
-
-RUN go mod init media_processor_go || true
-
+# 1. Сначала скачиваем зависимости принудительно
+RUN go mod download
+# 2. Потом подчищаем и генерируем суммы
 RUN go mod tidy
 
-RUN go build -o worker .
+# Теперь копируем остальное (main.go и т.д.)
+COPY . .
 
-RUN chmod +x worker
+# Собираем с флагом -mod=readonly (чтобы он не пытался менять файлы во время компиляции)
+RUN go build -mod=mod -o worker main.go
+
+# Финальный образ
+FROM alpine:latest
+RUN apk add --no-cache ca-certificates
+WORKDIR /root/
+COPY --from=builder /app/worker .
 
 CMD ["./worker"]

@@ -59,16 +59,22 @@ class VerifyOTPSerializer(serializers.Serializer):
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
+    # Сделаем email обязательным, чтобы chat_service не ругался на пустые данные
+    email = serializers.EmailField(required=True)
 
     class Meta:
         model = User
-        fields = ('username', 'password', 'email', 'is_2fa_enabled')
+        fields = ('username', 'password', 'email', 'is_2fa_enabled', 'search_handle')
+        # search_handle помечаем как read_only, он генерится в модели
+        read_only_fields = ('search_handle',)
 
     def create(self, validated_data):
+        # Хешируем пароль
         validated_data['password'] = make_password(validated_data['password'])
         return super().create(validated_data)
     
 class UserSearchSerializer(ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username']
+        # Добавляем search_handle, чтобы фронт мог отображать @username
+        fields = ['id', 'username', 'search_handle', 'avatar']

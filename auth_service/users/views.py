@@ -1,25 +1,29 @@
-from .models import User
-from rest_framework.permissions import AllowAny
-from rest_framework_simplejwt.views import TokenObtainPairView
+from django.db.models import Q # Для поиска по нескольким полям
+from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import generics
-from .serializers import UserSearchSerializer
-from rest_framework import permissions
+from rest_framework.permissions import AllowAny
+from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .serializers import CustomTokenObtainPairSerializer
-from .serializers import VerifyOTPSerializer
-from .serializers import RegisterSerializer
+from .models import User
+from .serializers import (
+    UserSearchSerializer, 
+    CustomTokenObtainPairSerializer, 
+    VerifyOTPSerializer, 
+    RegisterSerializer
+)
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
     
 class VerifyOTPView(APIView):
+    permission_classes = [AllowAny] # Чтобы можно было подтвердить OTP без токена
+
     def post(self, request):
         serializer = VerifyOTPSerializer(data=request.data)
         if serializer.is_valid():
-            return Response(serializer.validated_data)
-        return Response(serializer.errors, status=400)
+            return Response(serializer.validated_data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -27,12 +31,14 @@ class RegisterView(generics.CreateAPIView):
     permission_classes = [AllowAny]
     
 class UserSearchView(generics.ListAPIView):
-    queryset = User.objects.all()
     serializer_class = UserSearchSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        username = self.request.query_params.get('search', None)
-        if username:
-            return User.objects.filter(username__icontains=username)
+        query = self.request.query_params.get('search', None)
+        if query:
+            # Ищем и по обычному имени, и по @хэндлу
+            return User.objects.filter(
+                Q(username__icontains=query) | Q(search_handle__icontains=query)
+            ).distinct()[:10] # Ограничим выдачу, чтобы не грузить базу
         return User.objects.none()
